@@ -7,4 +7,3 @@ saved_videos*
 saved_models*
 buffer
 *.mp4
-*.pkl
