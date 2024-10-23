@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument("--min_expl_noise", default=0.0, type=float)
 
     # context embedding
-    parser.add_argument("--context_num", default=4, type=int)
+    parser.add_argument("--context_num", default=3, type=int)
 
     # temporal mask
     parser.add_argument("--mask_k", default=10, type=int)

@@ -16,3 +16,16 @@ pip install -r requirements.txt
 We need to first generate the expert demo data using `collect_expert_traj.py`.
 
 We can then run the TemporalOT agent using `python main.py`.
+
+## Cite
+
+Please cite our work if you find it useful:
+
+```
+@InProceedings{fu2024robot,
+  title={Robot Policy Learning with Temporal Optimal Transport Reward},
+  author = {Yuwei Fu and Haichao Zhang and Di Wu and Wei Xu and Benoit Boulet},
+  booktitle={The Thirty-eighth Annual Conference on Neural Information Processing Systems},
+  year = {2024}
+}
+```
