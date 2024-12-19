@@ -19,7 +19,9 @@ from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
 from utils.env_utils import CAMERA
 from utils.cluster_utils import set_os_vars
 from collect_expert_traj import collect_trajectories
-from PIL import Image
+
+from datetime import datetime
+import wandb
 
 def get_args():
     import argparse
@@ -33,6 +35,11 @@ def get_args():
     parser.add_argument("--expl_noise", default=0.4, type=float)
     parser.add_argument("--min_expl_noise", default=0.0, type=float)
     parser.add_argument("--camera_name", default="d", type=str)
+    parser.add_argument("--wandb_mode", default="online", type=str)
+    parser.add_argument("--n_eval_episodes", default=100, type=int) # run eval over _ episodes
+    parser.add_argument("--eval_step_period", default=10000, type=int) # eval every _ steps
+    parser.add_argument("--video_episode_period", default=400, type=int) # save a video every _ episodes
+    parser.add_argument("--job_id", default=1, type=int) 
 
     # context embedding
     parser.add_argument("--context_num", default=3, type=int)
@@ -49,7 +56,7 @@ def get_args():
     return args
 
 
-def run(cfg):
+def run(cfg, wandb_run=None):
     # random seed
     seed = cfg.seed
     np.random.seed(seed)
@@ -67,7 +74,6 @@ def run(cfg):
     log_dir = f"logs/{exp_prefix}/{env_name}"
     model_dir = f"saved_models/{exp_prefix}/{env_name}/{exp_name}"
     video_dir = f"saved_videos/{exp_prefix}/{env_name}/{exp_name}"
-
 
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
@@ -179,9 +185,15 @@ def run(cfg):
         if time_step.last():
             if record_traj:
                 video_fname = f"{video_dir}/{global_episode}.mp4"
-                imageio.mimsave(video_fname, frames, fps=60)
+                imageio.mimsave(video_fname, frames, fps=15)
+
+                if wandb_run is not None:
+                    wandb_run.log({"trajectory/video":
+                        wandb.Video(np.stack([np.uint8(s).transpose(2, 0, 1) for s in frames]), fps=15)}
+                    )
+
             global_episode += 1
-            record_traj = global_episode % 400 == 0
+            record_traj = global_episode % cfg.video_episode_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
             pixels = np.stack(pixels, axis=0)
 
             ot_rewards, cost_min, cost_max = agent.ot_rewarder(pixels)
@@ -245,8 +257,8 @@ def run(cfg):
         episode_step += 1
 
         # evaluation
-        if t % 10000 == 0:
-            eval_success_rate = eval_agent(agent, eval_env, cfg.obs_type)
+        if t % cfg.eval_step_period == 0:
+            eval_success_rate = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
             res.append((t, gamma.item(), expl_noise, eval_success_rate))
             logger.info(
                 f"[T {t//1000}K][EP {global_episode}] "
@@ -263,6 +275,23 @@ def run(cfg):
                 f"cmax: {cost_max:.2f}\n"
             )
 
+            metrics = {"train/step": t, 
+                        "train/global_episode": global_episode,
+                        "train/expl_noise": expl_noise, 
+                        "train/discount_factor": gamma.item(),
+                        "eval/success_rate": eval_success_rate,
+                        "eval/done": success,
+                        "rewards/min_reward": ot_rewards.min(),
+                        "rewards/max_reward": ot_rewards.max(),
+                        "rewards/min_distance": cost_min,
+                        "rewards/max_distance": cost_max, 
+                        "rewards/reward_scale": -agent.sinkhorn_rew_scale,
+                        }
+        
+            if wandb_run is not None:
+                wandb_run.log(metrics)
+
+
         # update step
         t += 1
         pbar.update(1)
@@ -275,19 +304,25 @@ def run(cfg):
     os.system(f"rm -rf ./data/buffer_{env_name}_{timestamp}")
 
 
-def run_wandb(cfg):
+def run_wandb(args):
+    time = datetime.now()
+    time_string = time.strftime("%Y-%m-%d-%H:%M:%S")[:-3]
+
+    run_name = f"{args.env_name}_job-{args.job_id}_t-{time_string}"
+    tags = [args.env_name]
+
     with wandb.init(
-        project=cfg.logging.wandb_project,
-        name=cfg.logging.run_name,
+        project="temporal_ot",
+        name=run_name,
         tags=tags,
         sync_tensorboard=True,
-        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
-        mode=cfg.logging.wandb_mode,
+        config=vars(args),
+        mode=args.wandb_mode,
         monitor_gym=True,  # auto-upload the videos of agents playing the game
     ) as wandb_run:
-        pass
+        run(args, wandb_run)
 
 if __name__ == "__main__":
-    args = get_args()
     set_os_vars()
-    run(args)
+    args = get_args()
+    run_wandb(args)
