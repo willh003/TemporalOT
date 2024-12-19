@@ -19,6 +19,7 @@ from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
 from utils.env_utils import CAMERA
 from utils.cluster_utils import set_os_vars
 from collect_expert_traj import collect_trajectories
+from PIL import Image
 
 def get_args():
     import argparse
@@ -66,6 +67,8 @@ def run(cfg):
     log_dir = f"logs/{exp_prefix}/{env_name}"
     model_dir = f"saved_models/{exp_prefix}/{env_name}/{exp_name}"
     video_dir = f"saved_videos/{exp_prefix}/{env_name}/{exp_name}"
+
+
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(video_dir, exist_ok=True)
@@ -235,6 +238,7 @@ def run(cfg):
         cum_success += success
         episode_reward += time_step.reward
         time_steps.append(time_step)
+
         pixels.append(time_step.observation["pixels_large"])
         if record_traj:
             frames.append(get_image(time_step))
@@ -271,7 +275,7 @@ def run(cfg):
     os.system(f"rm -rf ./data/buffer_{env_name}_{timestamp}")
 
 
-def run_wandb():
+def run_wandb(cfg):
     with wandb.init(
         project=cfg.logging.wandb_project,
         name=cfg.logging.run_name,
@@ -281,6 +285,7 @@ def run_wandb():
         mode=cfg.logging.wandb_mode,
         monitor_gym=True,  # auto-upload the videos of agents playing the game
     ) as wandb_run:
+        pass
 
 if __name__ == "__main__":
     args = get_args()

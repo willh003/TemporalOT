@@ -137,6 +137,14 @@ def collect_trajectories(env_name, num_demos, camera_name):
 
             # Get frames
             screen = env.render()
+
+            if camera_name == "corner" or camera_name == "corner2" or camera_name == "corner3":
+                # For some reason, the image is flipped upside down
+                screen = np.flipud(screen)
+            elif camera_name == "corner4":
+            # For some reason, the image is flipped left-right
+                screen = np.fliplr(screen)
+
             image_int = np.uint8(screen)[:env._render_dim[0], :env._render_dim[1], :]
             # if camera_name == "corner" or camera_name == "corner2" or camera_name == "corner3":
             #     # These 3 cameras are upside down

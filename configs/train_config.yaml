@@ -12,6 +12,7 @@ compute:
 
 logging:
   eval_freq: 10000
+  video_freq: 20000
 
   wandb_project: TemporalOT
   wandb_mode: online

@@ -175,12 +175,20 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
         if mode == "rgb_array":
             frame = self._env.render()
             frame = cv2.resize(frame, (width, height))
+            
             return frame
         else:
             self._env.render()
 
     def get_frame(self):
         frame = self._env.render()
+        if self.camera_name == "corner" or self.camera_name == "corner2" or self.camera_name == "corner3":
+            # For some reason, the image is flipped upside down
+            frame = np.flipud(frame)
+        elif self.camera_name == "corner4":
+            # For some reason, the image is flipped left-right
+            frame = np.fliplr(frame)
+
         frame_small = cv2.resize(frame, (self._width, self._height))
         frame_large = cv2.resize(frame, (224, 224))
         return frame_small, frame_large
@@ -416,7 +424,9 @@ class ExtendedTimeStepWrapper(dm_env.Environment):
 
 
 def make_env(name, frame_stack, action_repeat, seed, max_path_length=None):
-    env = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f"{name}-goal-observable"](
+    env_class = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f"{name}-goal-observable"]    
+    
+    env = env_class(
         seed=seed,
         render_mode="rgb_array",
         camera_name=CAMERA[name])
@@ -424,7 +434,6 @@ def make_env(name, frame_stack, action_repeat, seed, max_path_length=None):
 
     if max_path_length is None:
         max_path_length = MAX_PATH_LENGTH[name]
-
     # add wrappers
     env = RGBArrayAsObservationWrapper(env,
                                        max_path_length=max_path_length,
