@@ -258,7 +258,8 @@ class TemporalOTAgent:
     def ot_rewarder(self, observations):
         scores_list = list()
         ot_rewards_list = list()
-        obs = torch.FloatTensor(observations).to(self.device)
+        obs = torch.as_tensor(observations).to(self.device)
+
         with torch.no_grad():
             obs = self.cost_encoder(obs)
         obs = self.get_context_observations(obs)
@@ -266,6 +267,7 @@ class TemporalOTAgent:
         for exp in self.demos:
             # context cost matrix
             cost_matrix = 0
+
             for i in range(self.context_num):
                 cost_matrix += cosine_distance(obs[i], exp[i])
             cost_matrix /= self.context_num

@@ -16,6 +16,8 @@ from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
 
 CAMERA = {
+    'button-press-v2': 'corner',
+    'door-close-v2': 'corner',
     'hammer-v2': 'corner3',
     'drawer-close-v2': 'corner',
     'drawer-open-v2': 'corner',
@@ -28,13 +30,13 @@ CAMERA = {
     'hand-insert-v2': 'corner',
     'peg-insert-side-v2': 'corner3',
     'assembly-v3': 'corner',
+    'assembly-v2': 'corner',
     'push-wall-v2': 'corner',
     'soccer-v2': 'corner',
     'disassemble-v2': 'corner',
     'pick-place-wall-v3': 'corner3',
     'pick-place-v2': 'corner3',
     'push-v2': 'corner3',
-    'push-wall-v2': 'corner',
     'lever-pull-v2': 'corner4',
     'stick-pull-v2': 'corner3',
     'shelf-place-v2': 'corner',
@@ -49,6 +51,8 @@ CAMERA = {
 }
 
 MAX_PATH_LENGTH = {
+    'button-press-v2': 125,
+    'door-close-v2': 125,
     'hammer-v2': 125,
     'drawer-close-v2': 125,
     'drawer-open-v2': 125,
@@ -61,13 +65,13 @@ MAX_PATH_LENGTH = {
     'hand-insert-v2': 125,
     'peg-insert-side-v2': 150,
     'assembly-v3': 175,
+    'assembly-v2': 175,
     'push-wall-v2': 175,
     'soccer-v2': 125,
     'disassemble-v2': 125,
     'pick-place-wall-v3': 175,
     'pick-place-v2': 125,
     'push-v2': 125,
-    'push-wall-v2': 175,
     'lever-pull-v2': 175,
     'stick-pull-v2': 175,
     'shelf-place-v2': 175,
@@ -101,7 +105,7 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
         self._height = height
         self.camera_name = camera_name
         self.max_path_length = max_path_length
-        dummy_feat = self._env.reset()
+        dummy_feat = self._env.reset()[0]
         dummy_obs = self.get_frame()[0]
         self.observation_space = spaces.Box(low=0,
                                             high=255,
@@ -145,13 +149,13 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
         self.episode_step = 0
 
         obs = {}
-        obs['features'] = self._env.reset(**kwargs).astype(np.float32)
+        obs['features'] = self._env.reset(**kwargs)[0].astype(np.float32)
         obs['pixels'], obs['pixels_large'] = self.get_frame()
         obs['goal_achieved'] = False
         return obs
 
     def step(self, action):
-        observation, reward, done, info = self._env.step(action)
+        observation, reward, done, _, info = self._env.step(action)
         self.episode_step += 1
         if self.episode_step == self.max_path_length:
             done = True
@@ -169,15 +173,14 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
 
     def render(self, mode="rgb_array", width=256, height=256):
         if mode == "rgb_array":
-            frame = self._env.render(offscreen=True,
-                                     camera_name=self.camera_name)
+            frame = self._env.render()
             frame = cv2.resize(frame, (width, height))
             return frame
         else:
             self._env.render()
 
     def get_frame(self):
-        frame = self._env.render(offscreen=True, camera_name=self.camera_name)
+        frame = self._env.render()
         frame_small = cv2.resize(frame, (self._width, self._height))
         frame_large = cv2.resize(frame, (224, 224))
         return frame_small, frame_large
@@ -414,7 +417,9 @@ class ExtendedTimeStepWrapper(dm_env.Environment):
 
 def make_env(name, frame_stack, action_repeat, seed, max_path_length=None):
     env = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f"{name}-goal-observable"](
-        seed=seed)
+        seed=seed,
+        render_mode="rgb_array",
+        camera_name=CAMERA[name])
     env._freeze_rand_vec = False
 
     if max_path_length is None:

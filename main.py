@@ -14,8 +14,11 @@ from tqdm import tqdm
 from models import ResNet, TemporalOTAgent
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
-                   record_demo, ReplayBufferStorage)
+                   record_demo, ReplayBufferStorage, load_gif_frames)
 
+from utils.env_utils import CAMERA
+from utils.cluster_utils import set_os_vars
+from collect_expert_traj import collect_trajectories
 
 def get_args():
     import argparse
@@ -28,6 +31,7 @@ def get_args():
     parser.add_argument("--num_demos", default=2, type=int)
     parser.add_argument("--expl_noise", default=0.4, type=float)
     parser.add_argument("--min_expl_noise", default=0.0, type=float)
+    parser.add_argument("--camera_name", default="d", type=str)
 
     # context embedding
     parser.add_argument("--context_num", default=3, type=int)
@@ -44,19 +48,19 @@ def get_args():
     return args
 
 
-def run(args):
+def run(cfg):
     # random seed
-    seed = args.seed
+    seed = cfg.seed
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     # setup logger
-    env_name = args.env_name
+    env_name = cfg.env_name
     timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     work_dir = Path.cwd()
     t1 = time.time() 
-    exp_prefix = f"cn{args.context_num}_mk{args.mask_k}_en{args.expl_noise}"
+    exp_prefix = f"cn{cfg.context_num}_mk{cfg.mask_k}_en{cfg.expl_noise}"
     exp_name = f"s{seed}_{timestamp}"
     print(f"Running {env_name}_{exp_prefix}_{exp_name}")
     log_dir = f"logs/{exp_prefix}/{env_name}"
@@ -70,7 +74,7 @@ def run(args):
         f"\t{k}: {v}\n" for k, v in vars(args).items()]))
 
     # use pixel or state
-    if args.obs_type == "pixels":
+    if cfg.obs_type == "pixels":
         frame_stack = 3
         use_encoder = True
     else:
@@ -88,7 +92,7 @@ def run(args):
                            seed=seed+123)
     env_horizon = (env_horizon+1) // 2
     data_specs = [
-        train_env.observation_spec()[args.obs_type],  # pixel: (9, 84, 84)
+        train_env.observation_spec()[cfg.obs_type],  # pixel: (9, 84, 84)
         train_env.action_spec(),
         specs.Array((1,), np.float32, "reward"),
         specs.Array((1,), np.float32, "discount")
@@ -100,10 +104,10 @@ def run(args):
     replay_loader = make_replay_loader(replay_dir=buffer_dir,
                                        max_size=150000,
                                        batch_size=512,
-                                       num_workers=args.num_workers,
+                                       num_workers=cfg.num_workers,
                                        save_experiences=False,
                                        nstep=3,
-                                       discount=args.gamma)
+                                       discount=cfg.gamma)
 
     # replay buffer iterator
     replay_iter = None
@@ -111,7 +115,7 @@ def run(args):
     # initialize the agent
     obs_spec=train_env.observation_spec()
     action_spec=train_env.action_spec()
-    agent = TemporalOTAgent(obs_shape=obs_spec[args.obs_type].shape,
+    agent = TemporalOTAgent(obs_shape=obs_spec[cfg.obs_type].shape,
                             action_shape=action_spec.shape,
                             device=device,
                             lr=1e-4,
@@ -123,24 +127,33 @@ def run(args):
                             stddev_clip=0.3,
                             sinkhorn_rew_scale=1,
                             auto_rew_scale_factor=10,
-                            context_num=args.context_num,
-                            mask_k=args.mask_k,
-                            epsilon=args.epsilon,
+                            context_num=cfg.context_num,
+                            mask_k=cfg.mask_k,
+                            epsilon=cfg.epsilon,
                             use_encoder=use_encoder)
 
     # expert demo
-    with open(f"data/expert_demos/{env_name}.pkl", "rb") as f:
-        data = pickle.load(f)
-        expert_pixel = data[:args.num_demos]
-    for i in range(len(expert_pixel)): 
-        record_demo(expert_pixel[i], video_dir, f"demo_origin{i}")
+    # "d" is a placeholder for the default camera
+    if cfg.camera_name != "d":
+        camera_name = cfg.camera_name
+    else:
+        camera_name = CAMERA[env_name]
+        
+    expert_pixel = []
+    for i in range(cfg.num_demos):
+        # If we have not collected expert trajectories yet
+        if not os.path.exists(f"create_demo/metaworld_demos/{env_name}/{env_name}_{camera_name}_{i}.gif"):
+            collect_trajectories(env_name, cfg.num_demos, camera_name)
+
+        data = load_gif_frames(f"create_demo/metaworld_demos/{env_name}/{env_name}_{camera_name}_{i}.gif", "torch")
+        expert_pixel.append(data)
 
     # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
     cost_encoder = ResNet().to(device)
     _ = cost_encoder.eval()
     with torch.no_grad():
-        demos = [cost_encoder(torch.FloatTensor(demo).to(device))
-                 for demo in expert_pixel]
+        demos = [cost_encoder(demo.to(device)) for demo in expert_pixel]
+
     agent.init_demos(cost_encoder, demos)
     logger.info(f"len(demo) = {len(demos)}, demos[0].shape = {demos[0].shape}")
 
@@ -157,7 +170,7 @@ def run(args):
     t = 1
     total_timesteps = 500000
     pbar = tqdm(total=total_timesteps)
-    res = [(0, args.gamma**3, 0)]
+    res = [(0, cfg.gamma**3, 0)]
     while t <= total_timesteps:
         # end of a trajectory
         if time_step.last():
@@ -167,6 +180,7 @@ def run(args):
             global_episode += 1
             record_traj = global_episode % 400 == 0
             pixels = np.stack(pixels, axis=0)
+
             ot_rewards, cost_min, cost_max = agent.ot_rewarder(pixels)
             assert cost_min >= 0
 
@@ -179,7 +193,7 @@ def run(args):
 
             # add to buffer at the end of the trajectory
             for i, elt in enumerate(time_steps):
-                elt = elt._replace(observation=time_steps[i].observation[args.obs_type])
+                elt = elt._replace(observation=time_steps[i].observation[cfg.obs_type])
                 if i == 0:
                     elt = elt._replace(reward=float("nan"))
                 else:
@@ -203,9 +217,9 @@ def run(args):
             action = train_env.action_space.sample()
         else:
             with torch.no_grad(), eval_mode(agent):
-                expl_noise = args.expl_noise - t * (
-                    (args.expl_noise - args.min_expl_noise) / total_timesteps)
-                action = agent.act(time_step.observation[args.obs_type],
+                expl_noise = cfg.expl_noise - t * (
+                    (cfg.expl_noise - cfg.min_expl_noise) / total_timesteps)
+                action = agent.act(time_step.observation[cfg.obs_type],
                                    expl_noise=expl_noise,
                                    eval_mode=False)
 
@@ -228,7 +242,7 @@ def run(args):
 
         # evaluation
         if t % 10000 == 0:
-            eval_success_rate = eval_agent(agent, eval_env, args.obs_type)
+            eval_success_rate = eval_agent(agent, eval_env, cfg.obs_type)
             res.append((t, gamma.item(), expl_noise, eval_success_rate))
             logger.info(
                 f"[T {t//1000}K][EP {global_episode}] "
@@ -257,6 +271,18 @@ def run(args):
     os.system(f"rm -rf ./data/buffer_{env_name}_{timestamp}")
 
 
+def run_wandb():
+    with wandb.init(
+        project=cfg.logging.wandb_project,
+        name=cfg.logging.run_name,
+        tags=tags,
+        sync_tensorboard=True,
+        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
+        mode=cfg.logging.wandb_mode,
+        monitor_gym=True,  # auto-upload the videos of agents playing the game
+    ) as wandb_run:
+
 if __name__ == "__main__":
     args = get_args()
+    set_os_vars()
     run(args)

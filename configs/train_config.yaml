@@ -1,0 +1,31 @@
+seed: 123
+
+run_notes: null
+
+env: 
+  name: button-press-v2
+  camera_name: d
+  obs_type: features
+
+compute:
+  num_workers: 1
+
+logging:
+  eval_freq: 10000
+
+  wandb_project: TemporalOT
+  wandb_mode: online
+  wandb_tags: []
+
+rl_algo:
+  gamma: .9
+  expl_noise: .4
+  min_expl_noise: 0.0
+
+defaults:
+  - reward_model: temporal_ot
+  - _self_
+
+hydra:
+  run:
+    dir: ./train_logs/${now:%Y-%m-%d-%H%M%S}_envt=${env.name}_rm=${reward_model.name}_nt=${run_notes}

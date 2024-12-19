@@ -1,0 +1,6 @@
+name: temporal_ot
+num_demos: 2
+context_num: 3
+mask_k: 10
+epsilon: 100
+niter: 100

@@ -9,7 +9,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
+from PIL import Image
 
+import cv2
+
+def load_gif_frames(path: str, output_type="torch"):
+    """
+    output_type is either "torch" or "pil"
+
+    Load the gif at the path into a torch tensor with shape (frames, channel, height, width)
+    """
+    gif_obj = Image.open(path)
+    frames = [gif_obj.seek(frame_index) or gif_obj.convert("RGB") for frame_index in range(gif_obj.n_frames)]
+    if output_type == "pil":
+        return frames
+    
+    frames = [cv2.resize(np.array(frame), (224, 224)) for frame in frames]
+    
+    frames_torch = torch.stack([torch.tensor(frame).permute(2, 0, 1) for frame in frames])
+    frames_torch = frames_torch.float()
+    return frames_torch
 
 def record_demo(demo, video_dir, fname="demo"):
     frames = []
