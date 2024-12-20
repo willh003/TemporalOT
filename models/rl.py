@@ -4,8 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 
-from utils import (weight_init, to_torch, soft_update_params,
-                   mask_optimal_transport_plan, cosine_distance,
+from utils import (weight_init, to_torch, soft_update_params, cosine_distance,
                    TruncatedNormal, RandomShiftsAug)
 
 
@@ -90,8 +89,9 @@ class Critic(nn.Module):
 ####################
 # TemporalOT Agent #
 ####################
-class TemporalOTAgent:
+class DDPGAgent:
     def __init__(self,
+                 reward_fn,
                  obs_shape,
                  action_shape,
                  device,
@@ -101,22 +101,15 @@ class TemporalOTAgent:
                  critic_target_tau,
                  stddev,
                  stddev_clip,
-                 sinkhorn_rew_scale=1,
+                 rew_scale=1,
                  auto_rew_scale_factor=10,
                  env_horizon: int = 88,
                  context_num: int = 3,
-                 niter: int = 100,
-                 mask_k: int = 2,
-                 epsilon: float = 0.01,
                  use_encoder: bool = True):
 
-        self.context_num = context_num
+        self.reward_fn = reward_fn
 
-        # mask
-        self.epsilon = epsilon
-        self.niter = niter 
-        self.mask = np.triu(np.tril(np.ones((env_horizon, env_horizon)),
-                            k=mask_k), k=-mask_k)
+        self.context_num = context_num
 
         self.device = device
         self.lr = lr
@@ -125,7 +118,7 @@ class TemporalOTAgent:
         self.stddev_clip = stddev_clip
         self.update_cnt = 0
         self.use_encoder = use_encoder
-        self.sinkhorn_rew_scale = sinkhorn_rew_scale
+        self.rew_scale = rew_scale
         self.auto_rew_scale_factor = auto_rew_scale_factor
 
         # models 
@@ -255,9 +248,9 @@ class TemporalOTAgent:
         self.cost_encoder = cost_encoder
         self.demos = [self.get_context_observations(demo) for demo in demos]
 
-    def ot_rewarder(self, observations):
+    def rewarder(self, observations):
         scores_list = list()
-        ot_rewards_list = list()
+        rewards_list = list()
         obs = torch.as_tensor(observations).to(self.device)
 
         with torch.no_grad():
@@ -266,25 +259,26 @@ class TemporalOTAgent:
 
         for exp in self.demos:
             # context cost matrix
-            cost_matrix = 0
+            distance_matrix = 0
 
             for i in range(self.context_num):
-                cost_matrix += cosine_distance(obs[i], exp[i])
-            cost_matrix /= self.context_num
+                distance_matrix += cosine_distance(obs[i], exp[i])
+            distance_matrix /= self.context_num
 
-            # optimal weights 
-            transport_plan = mask_optimal_transport_plan(obs[0],
-                                                         exp[0],
-                                                         cost_matrix,
-                                                         self.mask,
-                                                         niter=self.niter,
-                                                         epsilon=self.epsilon)
-            ot_rewards = -self.sinkhorn_rew_scale * torch.diag(
-                torch.mm(transport_plan, cost_matrix.T)).detach().cpu().numpy()
-            scores_list.append(np.sum(ot_rewards))
-            ot_rewards_list.append(ot_rewards)
+            rewards = self.reward_fn(distance_matrix.cpu().numpy())
+            rewards = self.rew_scale * rewards
+
+            scores_list.append(np.sum(rewards))
+            rewards_list.append(rewards)
         closest_demo_index = np.argmax(scores_list)
-        return ot_rewards_list[closest_demo_index], cost_matrix.min().item(), cost_matrix.max().item()
+        return rewards_list[closest_demo_index], distance_matrix.min().item(), distance_matrix.max().item()
+
+    def set_reward_scale(self, scale):
+        self.rew_scale =  self.auto_rew_scale_factor * scale
+
+    def get_reward_scale(self):
+        return self.rew_scale
+
 
     def get_context_observations(self, observations):
         L = len(observations)
@@ -324,3 +318,4 @@ class TemporalOTAgent:
             self.critic.parameters(), lr=self.lr)
         self.critic_opt.load_state_dict(
             payload["critic_opt"].state_dict())
+

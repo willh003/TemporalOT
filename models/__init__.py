@@ -1,2 +1,2 @@
 from .resnet import ResNet
-from .temporalot import TemporalOTAgent
+from .rl import DDPGAgent

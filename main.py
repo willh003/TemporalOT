@@ -11,10 +11,12 @@ import torch
 from dm_env import specs
 from tqdm import tqdm
 
-from models import ResNet, TemporalOTAgent
+from models import ResNet, DDPGAgent
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
                    record_demo, ReplayBufferStorage, load_gif_frames)
+
+from seq_matching import load_matching_fn
 
 from utils.env_utils import CAMERA
 from utils.cluster_utils import set_os_vars
@@ -27,6 +29,7 @@ def get_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--env_name", default="basketball-v3", type=str)
+    parser.add_argument("--reward_fn", default="temporal_ot", type=str)
     parser.add_argument("--obs_type", default="features", type=str)
     parser.add_argument("--num_workers", default=1, type=int)
     parser.add_argument("--gamma", default=0.9, type=float)
@@ -41,13 +44,15 @@ def get_args():
     parser.add_argument("--video_episode_period", default=400, type=int) # save a video every _ episodes
     parser.add_argument("--job_id", default=1, type=int) 
 
+    # matching fn specific params
+    parser.add_argument("--tau", default=1, type=float) # smoothing for coverage, prob
+    parser.add_argument("--ent_reg", default=.01, type=float) # entropic regularization for ot
+    parser.add_argument("--sdtw_smoothing", default=5, type=float) # smoothing for sdtw
+    parser.add_argument("--mask_k", default=10, type=int) # size of mask window
+    parser.add_argument("--niter", default=100, type=int) # number of iters for temporal_ot optimization
+
     # context embedding
     parser.add_argument("--context_num", default=3, type=int)
-
-    # temporal mask
-    parser.add_argument("--mask_k", default=10, type=int)
-    parser.add_argument("--epsilon", default=0.01, type=float)
-    parser.add_argument("--niter", default=100, type=int)
 
     # encoder
     parser.add_argument("--encoder", default="resnet", type=str)
@@ -121,25 +126,34 @@ def run(cfg, wandb_run=None):
     # replay buffer iterator
     replay_iter = None
 
+    # get the custom reward function
+    matching_fn_cfg = {
+        "tau": cfg.tau,
+        "ent_reg": cfg.ent_reg,
+        "mask_k": cfg.mask_k,
+        "sdtw_smoothing": cfg.sdtw_smoothing
+    }
+    
+    reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
+
     # initialize the agent
     obs_spec=train_env.observation_spec()
-    action_spec=train_env.action_spec()
-    agent = TemporalOTAgent(obs_shape=obs_spec[cfg.obs_type].shape,
-                            action_shape=action_spec.shape,
-                            device=device,
-                            lr=1e-4,
-                            env_horizon=env_horizon,
-                            feature_dim=50,
-                            hidden_dim=1024,
-                            critic_target_tau=0.005,
-                            stddev=0.1,
-                            stddev_clip=0.3,
-                            sinkhorn_rew_scale=1,
-                            auto_rew_scale_factor=10,
-                            context_num=cfg.context_num,
-                            mask_k=cfg.mask_k,
-                            epsilon=cfg.epsilon,
-                            use_encoder=use_encoder)
+    action_spec=train_env.action_spec() 
+    agent = DDPGAgent(reward_fn=reward_fn,
+                        obs_shape=obs_spec[cfg.obs_type].shape,
+                        action_shape=action_spec.shape,
+                        device=device,
+                        lr=1e-4,
+                        env_horizon=env_horizon,
+                        feature_dim=50,
+                        hidden_dim=1024,
+                        critic_target_tau=0.005,
+                        stddev=0.1,
+                        stddev_clip=0.3,
+                        rew_scale=1, # this will be updated after first train iter
+                        auto_rew_scale_factor=10,
+                        context_num=cfg.context_num,
+                        use_encoder=use_encoder)
 
     # expert demo
     # "d" is a placeholder for the default camera
@@ -196,15 +210,15 @@ def run(cfg, wandb_run=None):
             record_traj = global_episode % cfg.video_episode_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
             pixels = np.stack(pixels, axis=0)
 
-            ot_rewards, cost_min, cost_max = agent.ot_rewarder(pixels)
+            rewards, cost_min, cost_max = agent.rewarder(pixels)
             assert cost_min >= 0
 
             # use first episode to normalize rewards
             if global_episode == 1:
-                ot_rewards_sum = abs(ot_rewards.sum())
-                agent.sinkhorn_rew_scale = agent.auto_rew_scale_factor / ot_rewards_sum
-                logger.info(f"agent.sinkhorn_rew_scale = {agent.sinkhorn_rew_scale:.3f}")
-                ot_rewards, cost_min, cost_max = agent.ot_rewarder(pixels)
+                rewards_sum = abs(rewards.sum())
+                agent.set_reward_scale(1 / (rewards_sum+1e-5))
+                logger.info(f"agent.sinkhorn_rew_scale = {agent.get_reward_scale():.3f}")
+                rewards, cost_min, cost_max = agent.rewarder(pixels)
 
             # add to buffer at the end of the trajectory
             for i, elt in enumerate(time_steps):
@@ -212,7 +226,7 @@ def run(cfg, wandb_run=None):
                 if i == 0:
                     elt = elt._replace(reward=float("nan"))
                 else:
-                    elt = elt._replace(reward=ot_rewards[i - 1])
+                    elt = elt._replace(reward=rewards[i - 1])
                 replay_storage.add(elt)
 
             # reset env
@@ -264,9 +278,9 @@ def run(cfg, wandb_run=None):
                 f"[T {t//1000}K][EP {global_episode}] "
                 f"time: {(time.time() - t1)/60:.1f}, "
                 f"sr: {eval_success_rate:.1f}\n"
-                f"\tR: {ot_rewards.mean():.3f}, "
-                f"Rmax: {ot_rewards.max():.3f}, "
-                f"Rmin: {ot_rewards.min():.3f}, "
+                f"\tR: {rewards.mean():.3f}, "
+                f"Rmax: {rewards.max():.3f}, "
+                f"Rmin: {rewards.min():.3f}, "
                 f"expl: {expl_noise:.3f}\n"
                 f"\tgamma: {gamma.item():.2f}, "
                 f"done: {success:.0f}, "
@@ -281,11 +295,12 @@ def run(cfg, wandb_run=None):
                         "train/discount_factor": gamma.item(),
                         "eval/success_rate": eval_success_rate,
                         "eval/done": success,
-                        "rewards/min_reward": ot_rewards.min(),
-                        "rewards/max_reward": ot_rewards.max(),
+                        "rewards/mean_reward": rewards.mean(),
+                        "rewards/min_reward": rewards.min(),
+                        "rewards/max_reward": rewards.max(),
                         "rewards/min_distance": cost_min,
                         "rewards/max_distance": cost_max, 
-                        "rewards/reward_scale": -agent.sinkhorn_rew_scale,
+                        "rewards/reward_scale": -agent.get_reward_scale(),
                         }
         
             if wandb_run is not None:

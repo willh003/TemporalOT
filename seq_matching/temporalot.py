@@ -4,6 +4,59 @@ import ot
 import numpy as np
 from scipy.special import logsumexp
 
+def compute_temporal_ot_reward(cost_matrix,
+                                mask_k: int = 2,
+                                niter: int = 100,
+                                ent_reg: float = 0.01):
+
+    # optimal weights 
+    mask = bordered_identity_like(cost_matrix.shape[0], cost_matrix.shape[1], k=mask_k)
+    transport_plan = mask_optimal_transport_plan(cost_matrix,
+                                                mask,
+                                                niter,
+                                                ent_reg)
+    
+
+    ot_cost = np.sum(transport_plan * cost_matrix, axis=1)
+    ot_reward = -ot_cost
+
+    return ot_cost
+
+def bordered_identity_like(N, M, k):
+    """
+    Create an identity-like matrix of shape (N, M), such that each column has N // M 1s,
+    the remainder is distributed as evenly as possible starting from the last column,
+    and a border of width k is added on each side of the ones
+    """
+    k = int(k)
+
+    # Base number of 1s per column
+    base_ones = N // M
+    # Remainder to distribute among the first (N % M) columns
+    remainder = N % M
+
+    # Initialize an (N, M) zero matrix
+    matrix = np.zeros((N, M), dtype=int)
+
+    # Fill each column with `base_ones` 1s, plus 1 additional 1 for the first `remainder` columns
+    current_row = 0
+    for col in range(M):
+        num_ones = base_ones + 1 if M - col - 1 < remainder else base_ones
+        matrix[current_row:current_row + num_ones, col] = 1
+        current_row += num_ones  # Move to the next starting row
+
+    # Create the border by adding k ones to the left and right of each row's 1s
+    bordered_matrix = np.zeros_like(matrix)
+
+    for row in range(N):
+        for col in range(M):
+            if matrix[row, col] == 1:
+                start_col  = max(0, col - k)
+                end_col = min(N, col + k + 1)
+                bordered_matrix[row, start_col:end_col] = 1
+
+    return bordered_matrix
+
 
 def mask_sinkhorn(a, b, M, Mask, reg=0.01, numItermax=1000, stopThr=1e-9):
     # set a large value (1e6) for masked entry
@@ -50,24 +103,22 @@ def sinkhorn_log(a, b, M, reg=0.01, numItermax=1000, stopThr=1e-9):
     return pi
 
 
-def mask_optimal_transport_plan(X,
-                                Y,
-                                cost_matrix,
+def mask_optimal_transport_plan(cost_matrix,
                                 Mask,
                                 niter=100,
-                                epsilon=0.01):
-    X_pot = np.ones(X.shape[0]) / X.shape[0]
-    Y_pot = np.ones(Y.shape[0]) / Y.shape[0]
-    c_m = cost_matrix.data.detach().cpu().numpy()
+                                ent_reg=0.01,
+                                device='cuda'):
+    X_pot = np.ones(cost_matrix.shape[0]) / cost_matrix.shape[0]
+    Y_pot = np.ones(cost_matrix.shape[1]) / cost_matrix.shape[1]
+
     transport_plan = mask_sinkhorn(X_pot,
                                    Y_pot,
-                                   c_m,
+                                   cost_matrix,
                                    Mask,
-                                   epsilon,
+                                   ent_reg,
                                    numItermax=niter)
-    transport_plan = torch.from_numpy(transport_plan).to(X.device)
-    transport_plan.requires_grad = False
-    return transport_plan.float()
+
+    return transport_plan
 
 
 def optimal_transport_plan(X,
@@ -76,7 +127,7 @@ def optimal_transport_plan(X,
                            method="sinkhorn_gpu",
                            niter=500,
                            use_log=False,
-                           epsilon=0.01):
+                           ent_reg=0.01):
     X_pot = np.ones(X.shape[0]) / X.shape[0]
     Y_pot = np.ones(Y.shape[0]) / Y.shape[0]
     c_m = cost_matrix.data.detach().cpu().numpy()
@@ -84,33 +135,14 @@ def optimal_transport_plan(X,
         transport_plan = sinkhorn_log(X_pot,
                                       Y_pot,
                                       c_m,
-                                      epsilon,
+                                      ent_reg,
                                       numItermax=niter)
     else:
         transport_plan = ot.sinkhorn(X_pot,
                                      Y_pot,
                                      c_m,
-                                     epsilon,
+                                     ent_reg,
                                      numItermax=niter)
     transport_plan = torch.from_numpy(transport_plan).to(X.device)
     transport_plan.requires_grad = False
     return transport_plan.float()
-
-
-def cosine_distance(x, y):
-    C = torch.mm(x, y.T)
-    x_norm = torch.norm(x, p=2, dim=1)
-    y_norm = torch.norm(y, p=2, dim=1)
-    x_n = x_norm.unsqueeze(1)
-    y_n = y_norm.unsqueeze(1)
-    norms = torch.mm(x_n, y_n.T)
-    C = (1 - C / norms)
-    return C
-
-
-def euclidean_distance(x, y):
-    "Returns the matrix of $|x_i-y_j|^p$."
-    x_col = x.unsqueeze(1)
-    y_lin = y.unsqueeze(0)
-    c = torch.sqrt(torch.sum((torch.abs(x_col - y_lin))**2, 2))
-    return c

@@ -6,6 +6,8 @@ env:
   name: button-press-v2
   camera_name: d
   obs_type: features
+  num_demos: 2
+  context_num: 3
 
 compute:
   num_workers: 1
@@ -19,7 +21,7 @@ logging:
   wandb_tags: []
 
 rl_algo:
-  gamma: .9
+  discount_factor: .9
   expl_noise: .4
   min_expl_noise: 0.0
 
