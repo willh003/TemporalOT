@@ -1,7 +1,19 @@
 from .load_matching_fn import load_matching_fn
+from .temporalot import bordered_identity_like
 import numpy as np
 
-def test():
+def test_bordered_identity():
+
+    env_horizon = 120
+    mask_k = int(np.random.rand(1) * 5 + 1)
+    target_mask = np.triu(np.tril(np.ones((env_horizon, env_horizon)),
+                            k=mask_k), k=-mask_k)
+    source_mask = bordered_identity_like(env_horizon, env_horizon, mask_k)
+
+    assert (target_mask == source_mask).all
+    
+
+def test_all_matching():
     names = ["coverage", "log_coverage", "prob", "log_prob", "ot", "temporal_ot", "soft_dtw", "dtw", "even", "final_frame"]
 
     matching_fn_cfg = {
@@ -22,4 +34,5 @@ def test():
         assert rew.shape[0] == cost_matrix.shape[0]
 
 if __name__=="__main__":
-    test()
+    test_bordered_identity()
+    test_all_matching()

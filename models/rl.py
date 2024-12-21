@@ -6,6 +6,7 @@ import numpy as np
 
 from utils import (weight_init, to_torch, soft_update_params, cosine_distance,
                    TruncatedNormal, RandomShiftsAug)
+from seq_matching import mask_optimal_transport_plan
 
 
 ###############
@@ -265,8 +266,23 @@ class DDPGAgent:
                 distance_matrix += cosine_distance(obs[i], exp[i])
             distance_matrix /= self.context_num
 
-            rewards = self.reward_fn(distance_matrix.cpu().numpy())
+            rewards = self.reward_fn(distance_matrix.cpu().numpy()).astype(np.float32)
             rewards = self.rew_scale * rewards
+
+            # ###### TESTING (compare to original implementation)
+            # mask = np.triu(np.tril(np.ones((obs.shape[1], exp.shape[1])),
+            #                 k=10), k=-10)
+            # transport_plan = mask_optimal_transport_plan(distance_matrix.data.detach().cpu().numpy(),
+            #                                              mask)
+
+            # transport_plan = torch.from_numpy(transport_plan).to(obs.device).float()
+            # transport_plan.requires_grad = False
+
+            # ot_rewards = -self.rew_scale * torch.diag(
+            #     torch.mm(transport_plan, distance_matrix.T)).detach().cpu().numpy()
+
+            # if not (np.abs(ot_rewards - rewards) < 1e-6).all():
+            #     breakpoint()
 
             scores_list.append(np.sum(rewards))
             rewards_list.append(rewards)

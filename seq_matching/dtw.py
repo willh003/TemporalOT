@@ -10,7 +10,7 @@ def compute_dtw_reward(cost_matrix):
     # Normalize the path so that each row sums to 1
     normalized_path = path / np.expand_dims(np.sum(path, axis=1), 1)
     dtw_cost = np.sum(cost_matrix * normalized_path, axis=1)  # size: (train_freq,)
-    final_reward = - dtw_cost
+    final_reward = -dtw_cost
 
     return final_reward
 

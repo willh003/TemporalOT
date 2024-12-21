@@ -85,7 +85,7 @@ def collect_trajectories(env_name, num_demos, camera_name):
     #   (We specifically set the action to zero)
     stop = CLEAR_ACTION_AFTER_SUCCESS.get(env_name, False)
 
-    env_folder = f"create_demo/metaworld_demos/{env_name}"
+    env_folder = f"create_demo/metaworld_demos/default/{env_name}"
     # Make the folder if it doesn't exist
     Path(env_folder).mkdir(parents=True, exist_ok=True)
 

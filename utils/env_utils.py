@@ -37,7 +37,7 @@ CAMERA = {
     'pick-place-wall-v3': 'corner3',
     'pick-place-v2': 'corner3',
     'push-v2': 'corner3',
-    'lever-pull-v2': 'corner4',
+    'lever-pull-v2': 'corner3', # corner4 in temporalOT paper
     'stick-pull-v2': 'corner3',
     'shelf-place-v2': 'corner',
     'window-close-v2': 'corner3',

@@ -48,7 +48,7 @@ def get_args():
     parser.add_argument("--tau", default=1, type=float) # smoothing for coverage, prob
     parser.add_argument("--ent_reg", default=.01, type=float) # entropic regularization for ot
     parser.add_argument("--sdtw_smoothing", default=5, type=float) # smoothing for sdtw
-    parser.add_argument("--mask_k", default=10, type=int) # size of mask window
+    parser.add_argument("--mask_k", default=10, type=int) # size of mask window on each side
     parser.add_argument("--niter", default=100, type=int) # number of iters for temporal_ot optimization
 
     # context embedding
@@ -165,10 +165,10 @@ def run(cfg, wandb_run=None):
     expert_pixel = []
     for i in range(cfg.num_demos):
         # If we have not collected expert trajectories yet
-        if not os.path.exists(f"create_demo/metaworld_demos/{env_name}/{env_name}_{camera_name}_{i}.gif"):
-            collect_trajectories(env_name, cfg.num_demos, camera_name)
+        if not os.path.exists(f"create_demo/metaworld_demos/{env_name}/default/{env_name}_{camera_name}_{i}.gif"):
+            raise Exception("You need to create the trajectories first")
 
-        data = load_gif_frames(f"create_demo/metaworld_demos/{env_name}/{env_name}_{camera_name}_{i}.gif", "torch")
+        data = load_gif_frames(f"create_demo/metaworld_demos/{env_name}/default/{env_name}_{camera_name}_{i}.gif", "torch")
         expert_pixel.append(data)
 
     # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
@@ -283,7 +283,6 @@ def run(cfg, wandb_run=None):
                 f"Rmin: {rewards.min():.3f}, "
                 f"expl: {expl_noise:.3f}\n"
                 f"\tgamma: {gamma.item():.2f}, "
-                f"done: {success:.0f}, "
                 f"cum_done: {cum_success:.0f}, "
                 f"cmin: {cost_min:.2f}, "
                 f"cmax: {cost_max:.2f}\n"
@@ -294,7 +293,6 @@ def run(cfg, wandb_run=None):
                         "train/expl_noise": expl_noise, 
                         "train/discount_factor": gamma.item(),
                         "eval/success_rate": eval_success_rate,
-                        "eval/done": success,
                         "rewards/mean_reward": rewards.mean(),
                         "rewards/min_reward": rewards.min(),
                         "rewards/max_reward": rewards.max(),
@@ -323,8 +321,8 @@ def run_wandb(args):
     time = datetime.now()
     time_string = time.strftime("%Y-%m-%d-%H:%M:%S")[:-3]
 
-    run_name = f"{args.env_name}_job-{args.job_id}_t-{time_string}"
-    tags = [args.env_name]
+    run_name = f"{args.env_name}_{args.reward_fn}_job-{args.job_id}_t-{time_string}"
+    tags = [args.env_name, args.reward_fn]
 
     with wandb.init(
         project="temporal_ot",
