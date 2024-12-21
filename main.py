@@ -1,6 +1,5 @@
 import logging
 import os
-import pickle
 import time
 from pathlib import Path
 
@@ -14,78 +13,51 @@ from tqdm import tqdm
 from models import ResNet, DDPGAgent
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
-                   record_demo, ReplayBufferStorage, load_gif_frames)
+                   record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path)
 
 from seq_matching import load_matching_fn
 
-from utils.env_utils import CAMERA
+from demo import CAMERA, get_demo_gif_path
 from utils.cluster_utils import set_os_vars
-from collect_expert_traj import collect_trajectories
 
 from datetime import datetime
 import wandb
-
-def get_args():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--env_name", default="basketball-v3", type=str)
-    parser.add_argument("--reward_fn", default="temporal_ot", type=str)
-    parser.add_argument("--obs_type", default="features", type=str)
-    parser.add_argument("--num_workers", default=1, type=int)
-    parser.add_argument("--gamma", default=0.9, type=float)
-    parser.add_argument("--seed", default=0, type=int)
-    parser.add_argument("--num_demos", default=2, type=int)
-    parser.add_argument("--expl_noise", default=0.4, type=float)
-    parser.add_argument("--min_expl_noise", default=0.0, type=float)
-    parser.add_argument("--camera_name", default="d", type=str)
-    parser.add_argument("--wandb_mode", default="online", type=str)
-    parser.add_argument("--n_eval_episodes", default=100, type=int) # run eval over _ episodes
-    parser.add_argument("--eval_step_period", default=10000, type=int) # eval every _ steps
-    parser.add_argument("--video_episode_period", default=400, type=int) # save a video every _ episodes
-    parser.add_argument("--job_id", default=1, type=int) 
-
-    # matching fn specific params
-    parser.add_argument("--tau", default=1, type=float) # smoothing for coverage, prob
-    parser.add_argument("--ent_reg", default=.01, type=float) # entropic regularization for ot
-    parser.add_argument("--sdtw_smoothing", default=5, type=float) # smoothing for sdtw
-    parser.add_argument("--mask_k", default=10, type=int) # size of mask window on each side
-    parser.add_argument("--niter", default=100, type=int) # number of iters for temporal_ot optimization
-
-    # context embedding
-    parser.add_argument("--context_num", default=3, type=int)
-
-    # encoder
-    parser.add_argument("--encoder", default="resnet", type=str)
-
-    args = parser.parse_args()
-    return args
-
+import uuid
+from omegaconf import DictConfig, OmegaConf
+import hydra
+from hydra.core.global_hydra import GlobalHydra
 
 def run(cfg, wandb_run=None):
+    
+
     # random seed
-    seed = cfg.seed
+    if cfg.seed == 'r':
+        seed = np.random.rand() * 1000
+    else:
+        seed = cfg.seed
+
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     # setup logger
     env_name = cfg.env_name
-    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    work_dir = Path.cwd()
-    t1 = time.time() 
-    exp_prefix = f"cn{cfg.context_num}_mk{cfg.mask_k}_en{cfg.expl_noise}"
-    exp_name = f"s{seed}_{timestamp}"
-    print(f"Running {env_name}_{exp_prefix}_{exp_name}")
-    log_dir = f"logs/{exp_prefix}/{env_name}"
-    model_dir = f"saved_models/{exp_prefix}/{env_name}/{exp_name}"
-    video_dir = f"saved_videos/{exp_prefix}/{env_name}/{exp_name}"
+    device = cfg.device
 
+    run_path = get_output_path()
+
+    buffer_dir = os.path.join(run_path, "buffer") # used for storing replay buffer
+    log_dir = os.path.join(run_path, "logs")
+    eval_dir = os.path.join(run_path, "eval")
+    model_dir = os.path.join(run_path, "models")
+    video_dir = os.path.join(run_path, "videos")
+
+    os.makedirs(buffer_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(video_dir, exist_ok=True)
-    logger = get_logger(f"{log_dir}/{exp_name}.log")
-    logger.info("Configs:\n" + "".join([
-        f"\t{k}: {v}\n" for k, v in vars(args).items()]))
+    os.makedirs(eval_dir, exist_ok=True)
+
+    logger = get_logger(f"{log_dir}/log.log")
 
     # use pixel or state
     if cfg.obs_type == "pixels":
@@ -103,7 +75,7 @@ def run(cfg, wandb_run=None):
     eval_env, _ = make_env(name=env_name,
                            frame_stack=frame_stack,
                            action_repeat=2,
-                           seed=seed+123)
+                           seed=seed)
     env_horizon = (env_horizon+1) // 2
     data_specs = [
         train_env.observation_spec()[cfg.obs_type],  # pixel: (9, 84, 84)
@@ -113,15 +85,14 @@ def run(cfg, wandb_run=None):
     ]
 
     # initialize the replay buffer
-    buffer_dir = work_dir / "data" / f"buffer_{env_name}_{timestamp}"
-    replay_storage = ReplayBufferStorage(data_specs, buffer_dir)
-    replay_loader = make_replay_loader(replay_dir=buffer_dir,
+    replay_storage = ReplayBufferStorage(data_specs, Path(buffer_dir))
+    replay_loader = make_replay_loader(replay_dir=Path(buffer_dir),
                                        max_size=150000,
                                        batch_size=512,
                                        num_workers=cfg.num_workers,
                                        save_experiences=False,
                                        nstep=3,
-                                       discount=cfg.gamma)
+                                       discount=cfg.discount_factor)
 
     # replay buffer iterator
     replay_iter = None
@@ -165,10 +136,12 @@ def run(cfg, wandb_run=None):
     expert_pixel = []
     for i in range(cfg.num_demos):
         # If we have not collected expert trajectories yet
-        if not os.path.exists(f"create_demo/metaworld_demos/{env_name}/default/{env_name}_{camera_name}_{i}.gif"):
-            raise Exception("You need to create the trajectories first")
+        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames="d")
 
-        data = load_gif_frames(f"create_demo/metaworld_demos/{env_name}/default/{env_name}_{camera_name}_{i}.gif", "torch")
+        if not os.path.exists(demo_path):
+            raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")
+
+        data = load_gif_frames(demo_path, "torch")
         expert_pixel.append(data)
 
     # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
@@ -193,21 +166,21 @@ def run(cfg, wandb_run=None):
     t = 1
     total_timesteps = 500000
     pbar = tqdm(total=total_timesteps)
-    res = [(0, cfg.gamma**3, 0)]
+    res = [(0, cfg.discount_factor**3, 0)]
     while t <= total_timesteps:
         # end of a trajectory
         if time_step.last():
             if record_traj:
-                video_fname = f"{video_dir}/{global_episode}.mp4"
-                imageio.mimsave(video_fname, frames, fps=15)
-
                 if wandb_run is not None:
                     wandb_run.log({"trajectory/video":
-                        wandb.Video(np.stack([np.uint8(s).transpose(2, 0, 1) for s in frames]), fps=15)}
+                        wandb.Video(np.stack([np.uint8(f).transpose(2, 0, 1) for f in frames]), fps=15)}
                     )
+                else:
+                    video_fname = f"{video_dir}/{global_episode}.mp4"
+                    imageio.mimsave(video_fname, frames, fps=15)
 
             global_episode += 1
-            record_traj = global_episode % cfg.video_episode_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
+            record_traj = global_episode % cfg.video_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
             pixels = np.stack(pixels, axis=0)
 
             rewards, cost_min, cost_max = agent.rewarder(pixels)
@@ -241,7 +214,7 @@ def run(cfg, wandb_run=None):
             episode_step = 0
             episode_reward = 0
 
-        # sample action
+        # for the first 2000 steps, just randomly sample actions. Then start querying the agent.
         if t <= 2000:
             action = train_env.action_space.sample()
         else:
@@ -251,12 +224,12 @@ def run(cfg, wandb_run=None):
                 action = agent.act(time_step.observation[cfg.obs_type],
                                    expl_noise=expl_noise,
                                    eval_mode=False)
-
-        # update the agent
+        
+        # after 6000 steps, start updating agent
         if t > 6000:
             if replay_iter is None:
                 replay_iter = iter(replay_loader)
-            gamma = agent.update(replay_iter)
+            discount_factor = agent.update(replay_iter)
 
         # take env step
         time_step = train_env.step(action)
@@ -271,71 +244,80 @@ def run(cfg, wandb_run=None):
         episode_step += 1
 
         # evaluation
-        if t % cfg.eval_step_period == 0:
-            eval_success_rate = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
-            res.append((t, gamma.item(), expl_noise, eval_success_rate))
-            logger.info(
-                f"[T {t//1000}K][EP {global_episode}] "
-                f"time: {(time.time() - t1)/60:.1f}, "
-                f"sr: {eval_success_rate:.1f}\n"
-                f"\tR: {rewards.mean():.3f}, "
-                f"Rmax: {rewards.max():.3f}, "
-                f"Rmin: {rewards.min():.3f}, "
-                f"expl: {expl_noise:.3f}\n"
-                f"\tgamma: {gamma.item():.2f}, "
-                f"cum_done: {cum_success:.0f}, "
-                f"cmin: {cost_min:.2f}, "
-                f"cmax: {cost_max:.2f}\n"
-            )
+        if t % cfg.eval_period == 0:
+            eval_metrics, final_observations = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
+            
+            # save the observations
+            np.save(os.path.join(eval_dir,f"{t}.npy"), final_observations)
 
             metrics = {"train/step": t, 
-                        "train/global_episode": global_episode,
-                        "train/expl_noise": expl_noise, 
-                        "train/discount_factor": gamma.item(),
-                        "eval/success_rate": eval_success_rate,
-                        "rewards/mean_reward": rewards.mean(),
-                        "rewards/min_reward": rewards.min(),
-                        "rewards/max_reward": rewards.max(),
-                        "rewards/min_distance": cost_min,
-                        "rewards/max_distance": cost_max, 
-                        "rewards/reward_scale": -agent.get_reward_scale(),
-                        }
-        
-            if wandb_run is not None:
-                wandb_run.log(metrics)
+                    "train/global_episode": global_episode,
+                    "train/expl_noise": expl_noise, 
+                    "train/discount_factor": discount_factor.item(),
+                    "rewards/mean_reward": rewards.mean(),
+                    "rewards/min_reward": rewards.min(),
+                    "rewards/max_reward": rewards.max(),
+                    "rewards/min_distance": cost_min,
+                    "rewards/max_distance": cost_max, 
+                    "rewards/reward_scale": -agent.get_reward_scale(),
+                    **eval_metrics
+            }
 
+            res.append((t, discount_factor.item(), expl_noise, *(v for v in eval_metrics.values())))
+
+            if wandb_run is not None:        
+                wandb_run.log(metrics)
+            else:
+                logger.info(
+                    str(metrics)
+                )
+        if t % cfg.model_period == 0:
+            state_dict = agent.save_snapshot()
+            torch.save(state_dict, os.path.join(model_dir, f'{t}.pt'))
 
         # update step
         t += 1
         pbar.update(1)
 
     # save logging
-    df = pd.DataFrame(res, columns=["step", "gamma", "expl_noise", "success_rate"])
-    df.to_csv(f"{log_dir}/{exp_name}.csv")
+    df = pd.DataFrame(res, columns=["step", "gamma", "expl_noise", *(k for k in eval_metrics.keys())])
+    df.to_csv(f"{log_dir}/performance.csv")
 
     # delete buffer
-    os.system(f"rm -rf ./data/buffer_{env_name}_{timestamp}")
+    os.system(f"rm -rf {buffer_dir}")
 
 
-def run_wandb(args):
-    time = datetime.now()
-    time_string = time.strftime("%Y-%m-%d-%H:%M:%S")[:-3]
-
-    run_name = f"{args.env_name}_{args.reward_fn}_job-{args.job_id}_t-{time_string}"
-    tags = [args.env_name, args.reward_fn]
+def run_wandb(cfg):
+    run_name = get_output_folder_name()
+    tags = [cfg.env_name, cfg.reward_fn]
 
     with wandb.init(
         project="temporal_ot",
         name=run_name,
         tags=tags,
         sync_tensorboard=True,
-        config=vars(args),
-        mode=args.wandb_mode,
+        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
+        mode=cfg.wandb_mode,
         monitor_gym=True,  # auto-upload the videos of agents playing the game
     ) as wandb_run:
-        run(args, wandb_run)
+    
+        run(cfg, wandb_run)
 
-if __name__ == "__main__":
+
+@hydra.main(config_path="configs", config_name="train_config")
+def main(cfg: DictConfig):
+
+    if cfg.wandb_mode == "disabled":
+        run(cfg)
+    else:
+        run_wandb(cfg)
+
+if __name__=="__main__":
     set_os_vars()
-    args = get_args()
-    run_wandb(args)
+    GlobalHydra.instance().clear()
+
+    # Generate short uuid to ensure no collisions on run paths
+    # This is important because buffers are stored in the run, so collisions will cause weird errors
+    OmegaConf.register_new_resolver("uuid", lambda: str(uuid.uuid4())[:6])
+    
+    main()

@@ -14,18 +14,20 @@ TAU=10
 WANDB_MODE="online"
 VIDEO_PERIOD=400 
 EVAL_PERIOD=10000
+MODEL_PERIOD=100000
 
 python main.py \
-    --env_name ${TASK_NAME} \
-    --reward_fn ${REWARD_FN} \
-    --obs_type "features" \
-    --seed ${SEED} \
-    --gamma ${DISCOUNT_FACTOR} \
-    --num_demos ${NUM_DEMOS} \
-    --camera_name ${CAMERA_NAME} \
-    --wandb_mode ${WANDB_MODE} \
-    --eval_step_period ${EVAL_PERIOD} \
-    --mask_k ${MASK_K} \
-    --tau ${TAU} \
-    --video_episode_period ${VIDEO_PERIOD}
+    env_name=${TASK_NAME} \
+    reward_fn=${REWARD_FN} \
+    obs_type="features" \
+    seed=${SEED} \
+    discount_factor=${DISCOUNT_FACTOR} \
+    num_demos=${NUM_DEMOS} \
+    camera_name=${CAMERA_NAME} \
+    wandb_mode=${WANDB_MODE} \
+    mask_k=${MASK_K} \
+    tau=${TAU} \
+    eval_period=${EVAL_PERIOD} \
+    model_period=${MODEL_PERIOD} \
+    video_period=${VIDEO_PERIOD}
     

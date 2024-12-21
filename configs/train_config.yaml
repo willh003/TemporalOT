@@ -1,34 +1,37 @@
 seed: 123
+device: 'cuda'
+num_workers: 1
 
-run_notes: null
+env_name: button-press-v2
+camera_name: d
+obs_type: features
+num_demos: 2
+context_num: 3
 
-env: 
-  name: button-press-v2
-  camera_name: d
-  obs_type: features
-  num_demos: 2
-  context_num: 3
+reward_fn: temporal_ot
+tau: 1
+ent_reg: .01
+sdtw_smoothing: 5
+mask_k: 10
+niter: 100
 
-compute:
-  num_workers: 1
+discount_factor: .9
+expl_noise: .4
+min_expl_noise: 0.0
 
-logging:
-  eval_freq: 10000
-  video_freq: 20000
+n_eval_episodes: 100
 
-  wandb_project: TemporalOT
-  wandb_mode: online
-  wandb_tags: []
+eval_period: 10000
+model_period: 100000
+video_period: 400
 
-rl_algo:
-  discount_factor: .9
-  expl_noise: .4
-  min_expl_noise: 0.0
+wandb_project: TemporalOT
+wandb_mode: online
+wandb_tags: []
 
 defaults:
-  - reward_model: temporal_ot
   - _self_
 
 hydra:
   run:
-    dir: ./train_logs/${now:%Y-%m-%d-%H%M%S}_envt=${env.name}_rm=${reward_model.name}_nt=${run_notes}
+    dir: ./train_logs/${now:%Y-%m-%d-%H-%M-%S-%f}_envt=${env_name}_rm=${reward_fn}_${uuid:}

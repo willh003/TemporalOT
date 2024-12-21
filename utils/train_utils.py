@@ -50,18 +50,38 @@ def get_logger(fname: str) -> logging.Logger:
 
 
 def eval_agent(agent, eval_env, obs_type, episode_num=100):
-    success_rate = 0
-    for _ in range(episode_num):
+    final_successes = 0
+    total_successes = 0
+
+    observations = []
+    
+    for i in range(episode_num):
+        ep_observations = []
         time_step = eval_env.reset()
         while not time_step.last():
+            total_successes += time_step.observation["goal_achieved"]
+            obs = time_step.observation[obs_type]
+            
+            # save the observations from the first 10 eval episodes
+            if i < 10:
+                ep_observations.append(obs)
+
             with torch.no_grad(), eval_mode(agent):
-                action = agent.act(obs=time_step.observation[obs_type],
+                action = agent.act(obs=obs,
                                    expl_noise=0,
                                    eval_mode=True)
             time_step = eval_env.step(action)
-        success_rate += time_step.observation["goal_achieved"]
-    success_rate /= episode_num
-    return success_rate
+        
+        if i < 10:
+            observations.append(np.stack(ep_observations))
+        final_successes += time_step.observation["goal_achieved"]
+
+    final_success_rate = final_successes / episode_num # final succcess per episode
+    total_success_rate = total_successes / episode_num # total success per episode
+    final_observations = np.stack(observations)
+    eval_metrics = {"eval/final_success_rate": final_success_rate, "eval/total_success_rate": total_success_rate}
+
+    return eval_metrics, final_observations
 
 
 def get_image(time_step):

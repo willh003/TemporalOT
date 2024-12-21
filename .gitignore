@@ -1,13 +1,12 @@
 .DS_Store
 __pycache__
-logs*
 imgs*
 tmp*
-saved_videos*
-saved_models*
+
 buffer
 *.mp4
 dump/
 create_demo/
 data/
 wandb/
+train_logs/

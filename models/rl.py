@@ -281,8 +281,7 @@ class DDPGAgent:
             # ot_rewards = -self.rew_scale * torch.diag(
             #     torch.mm(transport_plan, distance_matrix.T)).detach().cpu().numpy()
 
-            # if not (np.abs(ot_rewards - rewards) < 1e-6).all():
-            #     breakpoint()
+            # assert (np.abs(ot_rewards - rewards) < 1e-6).all():
 
             scores_list.append(np.sum(rewards))
             rewards_list.append(rewards)
