@@ -28,3 +28,8 @@ python main.py reward_fn="coverage" env_name="door-close-v2" num_demos=2
 ```
 
 Scripts for a single train run or a batched train run over different parameters are available in single.sh and multi.sh.
+
+
+## Eval
+
+States from each eval run are saved in train_logs/{run_name}/eval (I'm only saving the first 10 eval rollouts per eval step, but we are also only doing 10 eval rollouts per step now so this should be fine). Performance metrics over the course of training, such as final success rate (% eval rollouts with success on final frame) and total success rate (# successful frames per eval rollout) are stored in train_logs/{run_name}/logs/performance.csv after training is complete.
