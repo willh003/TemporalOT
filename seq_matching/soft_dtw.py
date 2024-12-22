@@ -15,4 +15,4 @@ def compute_soft_dtw_reward(cost_matrix, smoothing=1) -> np.ndarray:
     soft_dtw_cost = np.sum(cost_matrix * normalized_a, axis=1)  # size: (train_freq,)
 
     final_reward = - soft_dtw_cost
-    return final_reward
+    return final_reward, normalized_a

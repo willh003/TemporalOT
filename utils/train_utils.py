@@ -10,6 +10,8 @@ import torch.nn.functional as F
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
 from PIL import Image
+import io
+import matplotlib.pyplot as plt
 
 import cv2
 
@@ -83,6 +85,28 @@ def eval_agent(agent, eval_env, obs_type, episode_num=100):
 
     return eval_metrics, final_observations
 
+def plot_train_heatmap(matrix, title):
+    # Create a heatmap of the cost matrix with grayscale colormap
+    plt.figure(figsize=(8, 6))
+    plt.imshow(matrix, cmap="gray", aspect="auto")
+    plt.colorbar()
+    plt.title(title)
+    plt.xlabel("Reference Trajectory")
+    plt.ylabel("Learner Trajectory")
+
+    # Save the plot to a BytesIO buffer
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png")
+    plt.close()
+    buffer.seek(0)
+
+    img = Image.open(buffer)
+    return img
+
+def plot_training_performance(df, out_path):
+    plt.plot(df["step"], df["final_success_rate"])
+    plt.title("Success Rate in Final Env Step over Training")
+    plt.savefig(out_path)
 
 def get_image(time_step):
     image = time_step.observation["pixels_large"][-3:, ...]

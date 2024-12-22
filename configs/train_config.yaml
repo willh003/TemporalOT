@@ -7,8 +7,9 @@ camera_name: d
 obs_type: features
 num_demos: 2
 context_num: 3
+include_timestep: True
 
-reward_fn: temporal_ot
+reward_fn: coverage
 tau: 1
 ent_reg: .01
 sdtw_smoothing: 5
@@ -19,7 +20,7 @@ discount_factor: .9
 expl_noise: .4
 min_expl_noise: 0.0
 
-n_eval_episodes: 100
+n_eval_episodes: 10
 
 eval_period: 10000
 model_period: 100000

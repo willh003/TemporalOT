@@ -1,31 +1,30 @@
-# TemporalOT
+# Cover Your Bases
 
 ## Environment Setup
 
-We use Python3.9 and Cuda12.
+Install the requirements, including the metaworld submodule. This should link to the temporalot branch of the portal-cornell metaworld repo.
 
 ```shell
-conda create --name TemporalOT python==3.9
-conda activate TemporalOT
+conda create --name coverage python==3.9
+conda activate coverage
 conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 pip install -r requirements.txt
+cd Metaworld
+pip install -e .
 ```
 
 ## Run Experiments
 
-We need to first generate the expert demo data using `collect_expert_traj.py`.
+We need to first generate the expert demo data using `demo/collect_expert_traj.py`. We can optionally configure the environment, number of demos (default 2, as they do in TemporalOT), and camera angle (for default, use "d"). Environment defaults, like cameras and episode lengths, are specified in `demo/constants.py`
 
-We can then run the TemporalOT agent using `python main.py`.
+We can then run the TemporalOT agent using `python main.py`. To change the reward function, simply specify reward_fn in the config or command line. These functions are defined in seq_matching/load_matching_fn.
 
-## Cite
+Training configs are stored in configs/ . You can modify them as command line arguments or directly in the config.
 
-Please cite our work if you find it useful:
 
+```shell
+python -m demo.collect_expert_traj -e "door-close-v2" -n 2
+python main.py reward_fn="coverage" env_name="door-close-v2" num_demos=2
 ```
-@InProceedings{fu2024robot,
-  title={Robot Policy Learning with Temporal Optimal Transport Reward},
-  author = {Yuwei Fu and Haichao Zhang and Di Wu and Wei Xu and Benoit Boulet},
-  booktitle={The Thirty-eighth Annual Conference on Neural Information Processing Systems},
-  year = {2024}
-}
-```
+
+Scripts for a single train run or a batched train run over different parameters are available in single.sh and multi.sh.

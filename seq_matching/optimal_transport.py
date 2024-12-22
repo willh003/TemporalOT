@@ -40,4 +40,4 @@ def compute_ot_reward(cost_matrix, ent_reg=.01) -> np.ndarray:
     ot_cost = np.sum(cost_matrix * normalized_T, axis=1)  # size: (train_freq,)
 
     final_reward = -ot_cost
-    return final_reward
+    return final_reward, normalized_T

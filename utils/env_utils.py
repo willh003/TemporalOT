@@ -30,7 +30,8 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
                  width=84,
                  height=84,
                  max_path_length=125,
-                 camera_name="corner"):
+                 camera_name="corner",
+                 include_timestep=False):
         self._env = env
         self._width = width
         self._height = height
@@ -69,18 +70,30 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
             minimum=0,
             maximum=255,
             name='observation')
-        feature_shape = dummy_feat.shape
 
-        self._obs_spec['features'] = specs.Array(shape=feature_shape,
+        
+        # Note: this requires 1d features
+        if include_timestep:
+            # Include the timestep in the features
+            feature_len = dummy_feat.shape[0] + 1
+        else:
+            feature_len = dummy_feat.shape[0]
+        
+        self._obs_spec['features'] = specs.Array(shape=(feature_len,),
                                                  dtype=np.float32,
                                                  name='observation')
+
+    def get_temporal_encoding(self):
+        return self.episode_step / self.max_path_length
 
     def reset(self, **kwargs):
         # Set episode step to 0
         self.episode_step = 0
 
         obs = {}
-        obs['features'] = self._env.reset(**kwargs)[0].astype(np.float32)
+        features = self._env.reset(**kwargs)[0].astype(np.float32)
+        temporal_encoding = self.get_temporal_encoding()
+        obs['features'] = np.concatenate((features, [temporal_encoding])).astype(np.float32)
         obs['pixels'], obs['pixels_large'] = self.get_frame()
         obs['goal_achieved'] = False
         return obs
@@ -90,8 +103,10 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
         self.episode_step += 1
         if self.episode_step == self.max_path_length:
             done = True
+        
         obs = {}
-        obs['features'] = observation.astype(np.float32)
+        temporal_encoding = self.get_temporal_encoding()
+        obs['features'] = np.concatenate((observation, [temporal_encoding])).astype(np.float32)
         obs['pixels'], obs['pixels_large'] = self.get_frame()
         obs['goal_achieved'] = info['success']
         return obs, reward, done, info
@@ -354,7 +369,7 @@ class ExtendedTimeStepWrapper(dm_env.Environment):
         return getattr(self._env, name)
 
 
-def make_env(name, frame_stack, action_repeat, seed, max_path_length=None):
+def make_env(name, frame_stack, action_repeat, seed, max_path_length=None, include_timestep=False):
     env_class = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f"{name}-goal-observable"]    
     
     env = env_class(
@@ -368,7 +383,8 @@ def make_env(name, frame_stack, action_repeat, seed, max_path_length=None):
     # add wrappers
     env = RGBArrayAsObservationWrapper(env,
                                        max_path_length=max_path_length,
-                                       camera_name=CAMERA[name])
+                                       camera_name=CAMERA[name],
+                                       include_timestep=include_timestep)
     env = ActionDTypeWrapper(env, np.float32)
     env = ActionRepeatWrapper(env, action_repeat)
     env = FrameStackWrapper(env, frame_stack)

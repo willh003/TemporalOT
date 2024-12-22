@@ -10,4 +10,4 @@ def compute_final_frame_reward(cost_matrix):
 
     final_reward = - np.sum(cost_matrix * assignment, axis=1)  # size: (train_freq,)
 
-    return final_reward
+    return final_reward, assignment

@@ -24,7 +24,7 @@ def compute_log_probability_reward(cost_matrix, tau=1):
     # cumulative_cost bounded above by tau (at most d for each reference subgoal, tau = d*len(ref))
     final_reward = 1 - (1/tau) * cumulative_cost[:,  -1] 
     
-    return final_reward
+    return final_reward, cumulative_cost
 
 def compute_probability_reward(cost_matrix, tau=1):
     probability_matrix = np.exp(-cost_matrix/tau)
@@ -51,4 +51,4 @@ def compute_probability_reward(cost_matrix, tau=1):
 
     final_reward = cumulative_probs[:,  -1] # only because we are doing np.log( ... np.exp())
     
-    return final_reward
+    return final_reward, cumulative_probs

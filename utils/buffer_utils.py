@@ -59,6 +59,7 @@ class ReplayBufferStorage:
             value = time_step[spec.name]
             if np.isscalar(value):
                 value = np.full(spec.shape, value, spec.dtype)
+        
             assert spec.shape == value.shape and spec.dtype == value.dtype
             self._current_episode[spec.name].append(value)
         if time_step.last() or early_stop:
@@ -184,12 +185,13 @@ class ReplayBuffer(IterableDataset):
         action = episode['action'][idx]
         reward = np.zeros_like(episode['reward'][idx])
         discount = np.ones_like(episode['discount'][idx])
+
         for i in range(self._nstep):
             step_reward = episode['reward'][idx + i]
             reward += discount * step_reward
             discount *= episode['discount'][idx + i] * self._discount
         next_obs = episode['observation'][idx + self._nstep - 1]
-
+        
         return (obs, action, reward, discount, next_obs)
 
     def __iter__(self):

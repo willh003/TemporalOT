@@ -8,21 +8,22 @@ MEMORY=35GB
 TIME="4:30:00"
 
 # Training Parameters
-TASK_NAME=("door-close-v2" "button-press-v2" "door-open-v2" "window-open-v2")
-TAU=(0.1 10)
+TASK_NAME=("door-close-v2" "button-press-v2" "window-open-v2") # "door-open-v2" )
+TAU=1
 REWARD_FN="coverage"
-SEED=423
+SEED=("r" "r" "r" "r" "r") #117 67 89)
 NUM_DEMOS=2
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
-DISCOUNT_FACTOR=0.9
+DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=10
+INCLUDE_TIMESTEP=true
 
 # Logging Parameters
 WANDB_MODE="online"
 
 # Loop through TASK_NAME and TAU
 for task_name_i in "${TASK_NAME[@]}"; do
-    for tau_i in "${TAU[@]}"; do
+    for seed_i in "${SEED[@]}"; do
         sbatch <<EOF
 #!/bin/bash
 #SBATCH --job-name=train-${task_name}-${tau}
@@ -37,17 +38,18 @@ for task_name_i in "${TASK_NAME[@]}"; do
 # Capture the Slurm job ID
 job_id=\$SLURM_JOB_ID
 
-echo "Running training for task: ${task_name} with tau: ${tau}, job ID: \$job_id"
+echo "Running training for task: ${TASK_NAME} with seed: ${seed_i}, job ID: \$job_id"
 python main.py \
     env_name=${task_name_i} \
     reward_fn=${REWARD_FN} \
     obs_type="features" \
-    seed=${SEED} \
+    seed=${seed_i} \
     discount_factor=${DISCOUNT_FACTOR} \
     num_demos=${NUM_DEMOS} \
     camera_name=${CAMERA_NAME} \
     mask_k=${MASK_K} \
-    tau=${tau_i} \
+    tau=${TAU} \
+    include_timestep=${INCLUDE_TIMESTEP}
     wandb_mode=${WANDB_MODE}
 EOF
         sleep 1.1 # Ensure a unique timestamp for each run

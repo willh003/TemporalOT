@@ -5,6 +5,7 @@ from pathlib import Path
 
 import imageio
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from dm_env import specs
@@ -13,7 +14,7 @@ from tqdm import tqdm
 from models import ResNet, DDPGAgent
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
-                   record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path)
+                   record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap)
 
 from seq_matching import load_matching_fn
 
@@ -32,7 +33,7 @@ def run(cfg, wandb_run=None):
 
     # random seed
     if cfg.seed == 'r':
-        seed = np.random.rand() * 1000
+        seed = int(np.random.rand() * 1000)
     else:
         seed = cfg.seed
 
@@ -71,12 +72,15 @@ def run(cfg, wandb_run=None):
     train_env, env_horizon = make_env(name=env_name,
                                       frame_stack=frame_stack,
                                       action_repeat=2,
-                                      seed=seed)
+                                      seed=seed,
+                                      include_timestep=cfg.include_timestep)
     eval_env, _ = make_env(name=env_name,
                            frame_stack=frame_stack,
                            action_repeat=2,
-                           seed=seed)
+                           seed=seed,
+                           include_timestep=cfg.include_timestep)
     env_horizon = (env_horizon+1) // 2
+
     data_specs = [
         train_env.observation_spec()[cfg.obs_type],  # pixel: (9, 84, 84)
         train_env.action_spec(),
@@ -108,11 +112,11 @@ def run(cfg, wandb_run=None):
     reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
 
     # initialize the agent
-    obs_spec=train_env.observation_spec()
-    action_spec=train_env.action_spec() 
+    action_shape=train_env.action_spec().shape
+    obs_shape = train_env.observation_spec()[cfg.obs_type].shape
     agent = DDPGAgent(reward_fn=reward_fn,
-                        obs_shape=obs_spec[cfg.obs_type].shape,
-                        action_shape=action_spec.shape,
+                        obs_shape=obs_shape,
+                        action_shape=action_shape,
                         device=device,
                         lr=1e-4,
                         env_horizon=env_horizon,
@@ -170,28 +174,41 @@ def run(cfg, wandb_run=None):
     while t <= total_timesteps:
         # end of a trajectory
         if time_step.last():
+            global_episode += 1            
+            pixels = np.stack(pixels, axis=0)
+
+            rewards, assignment, cost_matrix = agent.rewarder(pixels)
+            cost_min = cost_matrix.min()
+            cost_max = cost_matrix.max()
+            assert cost_min >= 0 # sanity check
+
             if record_traj:
+                cost_image = plot_train_heatmap(cost_matrix, "Cost")
+                assignment_image = plot_train_heatmap(assignment, "Assignment")
+
                 if wandb_run is not None:
                     wandb_run.log({"trajectory/video":
                         wandb.Video(np.stack([np.uint8(f).transpose(2, 0, 1) for f in frames]), fps=15)}
                     )
+                    
+                    wandb_run.log({"trajectory/cost_matrix": wandb.Image(cost_image, caption="Cost Matrix (Grayscale)")})
+                    wandb_run.log({"trajectory/assignment_matrix": wandb.Image(assignment_image, caption="Assignment Matrix (Grayscale)")})
                 else:
                     video_fname = f"{video_dir}/{global_episode}.mp4"
                     imageio.mimsave(video_fname, frames, fps=15)
 
-            global_episode += 1
-            record_traj = global_episode % cfg.video_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
-            pixels = np.stack(pixels, axis=0)
-
-            rewards, cost_min, cost_max = agent.rewarder(pixels)
-            assert cost_min >= 0
+                    cost_image.save(f"{video_dir}/cost_{global_episode}.png", "wb")
+                    assignment_image.save(f"{video_dir}/cost_{global_episode}.png", "wb")
 
             # use first episode to normalize rewards
             if global_episode == 1:
                 rewards_sum = abs(rewards.sum())
+                
                 agent.set_reward_scale(1 / (rewards_sum+1e-5))
                 logger.info(f"agent.sinkhorn_rew_scale = {agent.get_reward_scale():.3f}")
-                rewards, cost_min, cost_max = agent.rewarder(pixels)
+                rewards, assignment, cost_matrix = agent.rewarder(pixels)
+                cost_min = cost_matrix.min()
+                cost_max = cost_matrix.max()
 
             # add to buffer at the end of the trajectory
             for i, elt in enumerate(time_steps):
@@ -201,6 +218,8 @@ def run(cfg, wandb_run=None):
                 else:
                     elt = elt._replace(reward=rewards[i - 1])
                 replay_storage.add(elt)
+
+            record_traj = global_episode % cfg.video_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
 
             # reset env
             time_steps = []
@@ -282,6 +301,8 @@ def run(cfg, wandb_run=None):
     # save logging
     df = pd.DataFrame(res, columns=["step", "gamma", "expl_noise", *(k for k in eval_metrics.keys())])
     df.to_csv(f"{log_dir}/performance.csv")
+
+    plot_training_performance(df, f"{log_dir}/performance.png")
 
     # delete buffer
     os.system(f"rm -rf {buffer_dir}")

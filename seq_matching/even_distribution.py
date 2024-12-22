@@ -16,4 +16,4 @@ def compute_even_distribution_reward(cost_matrix, mask_k: int=10):
 
     final_reward = - even_distributed_cost
 
-    return final_reward
+    return final_reward, normalized_assignment

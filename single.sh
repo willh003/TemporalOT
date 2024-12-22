@@ -8,7 +8,8 @@ SEED=123
 NUM_DEMOS=2
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 DISCOUNT_FACTOR=0.9
-TAU=10
+TAU=1
+INCLUDE_TIMESTEP=true
 
 # Logging Parameters
 WANDB_MODE="online"
@@ -27,6 +28,7 @@ python main.py \
     wandb_mode=${WANDB_MODE} \
     mask_k=${MASK_K} \
     tau=${TAU} \
+    include_timestep=${INCLUDE_TIMESTEP} \
     eval_period=${EVAL_PERIOD} \
     model_period=${MODEL_PERIOD} \
     video_period=${VIDEO_PERIOD}

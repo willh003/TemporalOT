@@ -106,9 +106,11 @@ class DDPGAgent:
                  auto_rew_scale_factor=10,
                  env_horizon: int = 88,
                  context_num: int = 3,
-                 use_encoder: bool = True):
+                 use_encoder: bool = True,
+                 include_timestep: bool = False):
 
         self.reward_fn = reward_fn
+        self.include_timestep = include_timestep
 
         self.context_num = context_num
 
@@ -129,7 +131,7 @@ class DDPGAgent:
             repr_dim = self.encoder.repr_dim
         else:
             repr_dim = obs_shape[0]
-
+            
         self.actor = Actor(repr_dim,
                            action_shape,
                            feature_dim,
@@ -252,6 +254,7 @@ class DDPGAgent:
     def rewarder(self, observations):
         scores_list = list()
         rewards_list = list()
+        assignment_list = list()
         obs = torch.as_tensor(observations).to(self.device)
 
         with torch.no_grad():
@@ -266,7 +269,8 @@ class DDPGAgent:
                 distance_matrix += cosine_distance(obs[i], exp[i])
             distance_matrix /= self.context_num
 
-            rewards = self.reward_fn(distance_matrix.cpu().numpy()).astype(np.float32)
+            rewards, assignment = self.reward_fn(distance_matrix.cpu().numpy())
+            rewards = rewards.astype(np.float32)
             rewards = self.rew_scale * rewards
 
             # ###### TESTING (compare to original implementation)
@@ -285,8 +289,10 @@ class DDPGAgent:
 
             scores_list.append(np.sum(rewards))
             rewards_list.append(rewards)
+            assignment_list.append(assignment)
+        
         closest_demo_index = np.argmax(scores_list)
-        return rewards_list[closest_demo_index], distance_matrix.min().item(), distance_matrix.max().item()
+        return rewards_list[closest_demo_index], assignment_list[closest_demo_index], distance_matrix.cpu().numpy()
 
     def set_reward_scale(self, scale):
         self.rew_scale =  self.auto_rew_scale_factor * scale
