@@ -217,12 +217,16 @@ class DDPGAgent:
         actor_loss.backward()
         self.actor_opt.step()
 
-    def update(self, replay_iter):
+    def update(self, replay_iter, gamma):
         self.update_cnt += 1
-        if self.update_cnt & 1: return None
+        if self.update_cnt & 1: return None # do not update every other step (double stepping)
 
         batch = next(replay_iter)
-        obs, action, reward, discount, next_obs = to_torch(batch, self.device)
+        obs, action, step_reward, _, next_obs = to_torch(batch, self.device) # DO NOT USE DISCOUNT FROM BUFFER
+        discount_factors = torch.pow(gamma, torch.arange(step_reward.shape[1], dtype=step_reward.dtype, device=step_reward.device))
+        # Multiply step rewards by discount factors and sum across steps
+        reward = torch.sum(step_reward.squeeze() * discount_factors, dim=1).unsqueeze(1)
+        discount = torch.ones_like(reward) * gamma # for target Q value update
 
         # augment 
         if self.use_encoder:
@@ -255,6 +259,8 @@ class DDPGAgent:
         scores_list = list()
         rewards_list = list()
         assignment_list = list()
+        cost_matrix_list = list()
+        progress_list = list()
         obs = torch.as_tensor(observations).to(self.device)
 
         with torch.no_grad():
@@ -269,30 +275,31 @@ class DDPGAgent:
                 distance_matrix += cosine_distance(obs[i], exp[i])
             distance_matrix /= self.context_num
 
-            rewards, assignment = self.reward_fn(distance_matrix.cpu().numpy())
+            rewards, info = self.reward_fn(distance_matrix.cpu().numpy())
+            assignment = info["assignment"]
             rewards = rewards.astype(np.float32)
             rewards = self.rew_scale * rewards
 
-            # ###### TESTING (compare to original implementation)
-            # mask = np.triu(np.tril(np.ones((obs.shape[1], exp.shape[1])),
-            #                 k=10), k=-10)
-            # transport_plan = mask_optimal_transport_plan(distance_matrix.data.detach().cpu().numpy(),
-            #                                              mask)
-
-            # transport_plan = torch.from_numpy(transport_plan).to(obs.device).float()
-            # transport_plan.requires_grad = False
-
-            # ot_rewards = -self.rew_scale * torch.diag(
-            #     torch.mm(transport_plan, distance_matrix.T)).detach().cpu().numpy()
-
-            # assert (np.abs(ot_rewards - rewards) < 1e-6).all():
+            if "progress" in info:
+                progress_list.append(info["progress"])
 
             scores_list.append(np.sum(rewards))
             rewards_list.append(rewards)
             assignment_list.append(assignment)
-        
+            cost_matrix_list.append(distance_matrix.cpu().numpy())
+
         closest_demo_index = np.argmax(scores_list)
-        return rewards_list[closest_demo_index], assignment_list[closest_demo_index], distance_matrix.cpu().numpy()
+
+        info = {"cost_matrix": cost_matrix_list[closest_demo_index],
+                "assignment": assignment_list[closest_demo_index]}
+
+        # if tracking progress then log it
+        if len(progress_list) > 0: 
+            info["progress"] = progress_list[closest_demo_index]
+
+        final_rewards = rewards_list[closest_demo_index]
+
+        return final_rewards, info
 
     def set_reward_scale(self, scale):
         self.rew_scale =  self.auto_rew_scale_factor * scale

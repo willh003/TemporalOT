@@ -14,7 +14,7 @@ from tqdm import tqdm
 from models import ResNet, DDPGAgent
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
-                   record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap)
+                   record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap, AdaptiveDiscount)
 
 from seq_matching import load_matching_fn
 
@@ -29,13 +29,15 @@ import hydra
 from hydra.core.global_hydra import GlobalHydra
 
 def run(cfg, wandb_run=None):
-    
 
     # random seed
     if cfg.seed == 'r':
         seed = int(np.random.rand() * 1000)
     else:
         seed = cfg.seed
+    
+    if wandb_run is not None:
+        wandb_run.log({"train/seed": seed})
 
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -59,6 +61,7 @@ def run(cfg, wandb_run=None):
     os.makedirs(eval_dir, exist_ok=True)
 
     logger = get_logger(f"{log_dir}/log.log")
+    logger.info(f"seed: {seed}")
 
     # use pixel or state
     if cfg.obs_type == "pixels":
@@ -90,14 +93,16 @@ def run(cfg, wandb_run=None):
 
     # initialize the replay buffer
     replay_storage = ReplayBufferStorage(data_specs, Path(buffer_dir))
+    discount = AdaptiveDiscount(cfg.discount_factor)
     replay_loader = make_replay_loader(replay_dir=Path(buffer_dir),
                                        max_size=150000,
                                        batch_size=512,
                                        num_workers=cfg.num_workers,
                                        save_experiences=False,
                                        nstep=3,
-                                       discount=cfg.discount_factor)
-
+                                       discount=discount)
+    replay_buffer = replay_loader.dataset
+    
     # replay buffer iterator
     replay_iter = None
 
@@ -106,7 +111,8 @@ def run(cfg, wandb_run=None):
         "tau": cfg.tau,
         "ent_reg": cfg.ent_reg,
         "mask_k": cfg.mask_k,
-        "sdtw_smoothing": cfg.sdtw_smoothing
+        "sdtw_smoothing": cfg.sdtw_smoothing,
+        "track_progress": cfg.track_progress
     }
     
     reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
@@ -168,7 +174,7 @@ def run(cfg, wandb_run=None):
 
     # run 1e6 steps with action repeat = 2
     t = 1
-    total_timesteps = 500000
+    total_timesteps = cfg.train_steps
     pbar = tqdm(total=total_timesteps)
     res = [(0, cfg.discount_factor**3, 0)]
     while t <= total_timesteps:
@@ -177,7 +183,19 @@ def run(cfg, wandb_run=None):
             global_episode += 1            
             pixels = np.stack(pixels, axis=0)
 
-            rewards, assignment, cost_matrix = agent.rewarder(pixels)
+            rewards, info = agent.rewarder(pixels)
+            assignment = info["assignment"]
+            cost_matrix = info["cost_matrix"]
+            if cfg.track_progress:
+                new_discount = .2 ** (1/info["progress"])                
+                discount.set_discount(new_discount)
+                
+                progress = info["progress"]
+                # print(f"progress: {progress}, new_discount: {discount()}")
+
+                if wandb_run is not None:
+                    wandb_run.log({"train/progress":progress}, commit=False)
+
             cost_min = cost_matrix.min()
             cost_max = cost_matrix.max()
             assert cost_min >= 0 # sanity check
@@ -197,8 +215,8 @@ def run(cfg, wandb_run=None):
                     video_fname = f"{video_dir}/{global_episode}.mp4"
                     imageio.mimsave(video_fname, frames, fps=15)
 
-                    cost_image.save(f"{video_dir}/cost_{global_episode}.png", "wb")
-                    assignment_image.save(f"{video_dir}/cost_{global_episode}.png", "wb")
+                    cost_image.save(f"{video_dir}/cost_{global_episode}.png")
+                    assignment_image.save(f"{video_dir}/cost_{global_episode}.png")
 
             # use first episode to normalize rewards
             if global_episode == 1:
@@ -206,7 +224,13 @@ def run(cfg, wandb_run=None):
                 
                 agent.set_reward_scale(1 / (rewards_sum+1e-5))
                 logger.info(f"agent.sinkhorn_rew_scale = {agent.get_reward_scale():.3f}")
-                rewards, assignment, cost_matrix = agent.rewarder(pixels)
+                rewards, info = agent.rewarder(pixels)
+                assignment = info["assignment"]
+                cost_matrix = info["cost_matrix"]
+                if cfg.track_progress:
+                    new_discount = .2 ** (1/info["progress"])
+                    discount.set_discount(new_discount)
+                        
                 cost_min = cost_matrix.min()
                 cost_max = cost_matrix.max()
 
@@ -245,10 +269,10 @@ def run(cfg, wandb_run=None):
                                    eval_mode=False)
         
         # after 6000 steps, start updating agent
-        if t > 6000:
+        if t > 500: #6000:
             if replay_iter is None:
                 replay_iter = iter(replay_loader)
-            discount_factor = agent.update(replay_iter)
+            discount_factor = agent.update(replay_iter, discount())
 
         # take env step
         time_step = train_env.step(action)
@@ -272,7 +296,7 @@ def run(cfg, wandb_run=None):
             metrics = {"train/step": t, 
                     "train/global_episode": global_episode,
                     "train/expl_noise": expl_noise, 
-                    "train/discount_factor": discount_factor.item(),
+                    "train/discount_factor": discount_factor,
                     "rewards/mean_reward": rewards.mean(),
                     "rewards/min_reward": rewards.min(),
                     "rewards/max_reward": rewards.max(),
@@ -282,7 +306,7 @@ def run(cfg, wandb_run=None):
                     **eval_metrics
             }
 
-            res.append((t, discount_factor.item(), expl_noise, *(v for v in eval_metrics.values())))
+            res.append((t, discount(), expl_noise, *(v for v in eval_metrics.values())))
 
             if wandb_run is not None:        
                 wandb_run.log(metrics)
@@ -300,9 +324,9 @@ def run(cfg, wandb_run=None):
 
     # save logging
     df = pd.DataFrame(res, columns=["step", "gamma", "expl_noise", *(k for k in eval_metrics.keys())])
-    df.to_csv(f"{log_dir}/performance.csv")
+    df.to_csv(f"{eval_dir}/performance.csv")
 
-    plot_training_performance(df, f"{log_dir}/performance.png")
+    plot_training_performance(df, f"{eval_dir}/performance.png")
 
     # delete buffer
     os.system(f"rm -rf {buffer_dir}")

@@ -1,6 +1,7 @@
 seed: 123
 device: 'cuda'
 num_workers: 1
+train_steps: 1000000 
 
 env_name: button-press-v2
 camera_name: d
@@ -10,6 +11,7 @@ context_num: 3
 include_timestep: True
 
 reward_fn: coverage
+track_progress: False
 tau: 1
 ent_reg: .01
 sdtw_smoothing: 5

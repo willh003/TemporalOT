@@ -1,18 +1,19 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="button-press-v2" # ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="log_coverage"
+TASK_NAME="door-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+REWARD_FN="coverage"
 MASK_K=10
 SEED=123
 NUM_DEMOS=2
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 DISCOUNT_FACTOR=0.9
-TAU=1
+TAU=10
 INCLUDE_TIMESTEP=true
+TRACK_PROGRESS=false
 
 # Logging Parameters
-WANDB_MODE="online"
+WANDB_MODE="disabled"
 VIDEO_PERIOD=400 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
@@ -20,6 +21,7 @@ MODEL_PERIOD=100000
 python main.py \
     env_name=${TASK_NAME} \
     reward_fn=${REWARD_FN} \
+    track_progress=${TRACK_PROGRESS} \
     obs_type="features" \
     seed=${SEED} \
     discount_factor=${DISCOUNT_FACTOR} \

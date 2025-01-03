@@ -1,5 +1,22 @@
 import numpy as np
 
+def dtw_progress_tracker(cost_matrix):
+    """
+    Return an estimate of the progress along the ref sequence made by the agent
+    (starting at index 0)
+    """
+
+    # cost up to 0 is just total distance from 0th ref
+    dtw_costs = [cost_matrix[:, 0].sum()]
+
+    for j in range(2, cost_matrix.shape[1]):
+        c_sub = cost_matrix[:, :j]
+        dtw_cost = - np.sum(compute_dtw_reward(c_sub)[0])
+        dtw_costs.append(dtw_cost)
+    
+    progress = np.argmin(dtw_costs)
+    return progress
+
 def compute_dtw_reward(cost_matrix):
     # Calculate the cost matrix between the reference sequence and the observed sequence
     #   size: (train_freq, ref_seq_len)

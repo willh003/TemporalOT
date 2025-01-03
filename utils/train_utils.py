@@ -104,7 +104,9 @@ def plot_train_heatmap(matrix, title):
     return img
 
 def plot_training_performance(df, out_path):
-    plt.plot(df["step"], df["final_success_rate"])
+    plt.plot(df["step"], df["eval/final_success_rate"])
+    plt.xlabel("step")
+    plt.ylabel("final success rate")
     plt.title("Success Rate in Final Env Step over Training")
     plt.savefig(out_path)
 
@@ -210,3 +212,14 @@ class RandomShiftsAug(nn.Module):
                              grid,
                              padding_mode='zeros',
                              align_corners=False)
+
+class AdaptiveDiscount:
+    def __init__(self, discount):
+        self.discount = discount
+        self.count = 0
+    
+    def __call__(self):
+        return self.discount
+
+    def set_discount(self, new_discount):
+        self.discount = new_discount

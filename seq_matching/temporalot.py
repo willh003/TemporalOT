@@ -19,7 +19,7 @@ def compute_temporal_ot_reward(cost_matrix,
 
     ot_cost = np.sum(transport_plan * cost_matrix, axis=1)
     ot_reward = -ot_cost
-    return ot_reward, transport_plan
+    return ot_reward, {"assignment": transport_plan}
 
 def mask_sinkhorn(a, b, M, Mask, reg=0.01, numItermax=1000, stopThr=1e-9):
     # set a large value (1e6) for masked entry

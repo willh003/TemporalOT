@@ -108,7 +108,7 @@ def collect_trajectories(env_name, num_demos, camera_name):
         rewards = list()
         successes = list()
         image_stack = deque([], maxlen=3)
-        large_image_stack = deque([], maxlen=3)
+        large_imae_stack = deque([], maxlen=3)
         goal_achieved = 0
 
         # Reset env
@@ -197,7 +197,7 @@ def collect_trajectories(env_name, num_demos, camera_name):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env_name", type=str, default="hammer-v2")
-    parser.add_argument("-n", "--num_demos", type=int, default=1)
+    parser.add_argument("-n", "--num_demos", type=int, default=2)
     parser.add_argument("-c", "--camera_name", type=str, default="d", choices=["d", "corner", "corner2", "corner3", "corner4"])
     args = parser.parse_args()
 

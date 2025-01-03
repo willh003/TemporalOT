@@ -116,6 +116,7 @@ class ReplayBuffer(IterableDataset):
 
     def _sample_episode(self):
         eps_fn = random.choice(self._episode_fns)
+        
         return self._episodes[eps_fn]
 
     def _store_episode(self, eps_fn):
@@ -185,19 +186,24 @@ class ReplayBuffer(IterableDataset):
         action = episode['action'][idx]
         reward = np.zeros_like(episode['reward'][idx])
         discount = np.ones_like(episode['discount'][idx])
+        #print(f"discount: {self._discount()}")
+        #print(f"discount count: {self._discount.count}")
 
+        step_rewards = []
         for i in range(self._nstep):
             step_reward = episode['reward'][idx + i]
-            reward += discount * step_reward
-            discount *= episode['discount'][idx + i] * self._discount
-        next_obs = episode['observation'][idx + self._nstep - 1]
+            step_rewards.append(step_reward)
+            # reward += discount * step_reward
+            # discount *= episode['discount'][idx + i] * self._discount()
         
-        return (obs, action, reward, discount, next_obs)
+        next_obs = episode['observation'][idx + self._nstep - 1]
+        step_rewards = np.stack(step_rewards) # convert to numpy first for speed
+
+        return (obs, action, torch.as_tensor(step_rewards), discount, next_obs)
 
     def __iter__(self):
         while True:
             yield self._sample()
-
 
 #################
 # Expert Buffer #
