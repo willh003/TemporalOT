@@ -9,4 +9,5 @@ dump/
 create_demo/
 data/
 wandb/
+icml_figs/
 train_logs/

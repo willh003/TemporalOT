@@ -8,13 +8,13 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("button-press-v2" "door-open-v2") # "lever-pull-v2" "window-open-v2"  "push-v2" )  # "door-open-v2" )
-TAU=1
+TASK_NAME=("door-open-v2") # "lever-pull-v2" "button-press-v2"  "window-open-v2"  "push-v2" )  # "door-open-v2" )
+TAU=0.01
 REWARD_FN=("coverage")  # "final_frame" "temporal_ot" 
 SEED=("r" "r") #"r" "r") #117 67 89)
 NUM_DEMOS=2
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
-DISCOUNT_FACTOR=0.9 # (0.9 0.99)
+DISCOUNT_FACTOR=0.01 # (0.9 0.99)
 MASK_K=10
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
