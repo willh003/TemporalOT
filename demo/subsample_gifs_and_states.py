@@ -1,16 +1,14 @@
 import os
 import numpy as np
 from PIL import Image
+from .constants import get_demo_dir, get_demo_gif_path
 
-def subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, input_states_path=None):
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
+def load_frames_and_states(input_gif_path, input_states_path=None):
 
     if input_states_path is None: # infer from gif path
         input_states_path =  os.path.splitext(input_gif_path)[0] + "_states.npy"
 
     assert input_gif_path.endswith(".gif"), "error: reference seq not a gif"
-    base_name = os.path.splitext(os.path.basename(input_gif_path))[0]
     
     # Load GIF and states
     gif = Image.open(input_gif_path)
@@ -24,6 +22,23 @@ def subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, inp
             gif.seek(gif.tell() + 1)
     except EOFError:
         pass  # End of GIF frames
+
+    return frames, states
+
+def save_frames_and_states(frames, gif_path, states, states_path):
+    frames[0].save(
+        gif_path,
+        save_all=True,
+        append_images=frames[1:],
+        loop=0
+    )
+    np.save(states_path, states)
+
+def evenly_subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, input_states_path=None):
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    base_name = os.path.splitext(os.path.basename(input_gif_path))[0]
+    frames, states = load_frames_and_states(input_gif_path, input_states_path)
 
     if last_frame is not None:
         frames = frames[:last_frame]
@@ -41,29 +56,39 @@ def subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, inp
 
     # Save subsampled frames as a new GIF
     subsampled_gif_path = os.path.join(output_dir, f"{base_name}_subsampled_{N}.gif")
-    subsampled_frames[0].save(
-        subsampled_gif_path,
-        save_all=True,
-        append_images=subsampled_frames[1:],
-        loop=0
-    )
-
-    # Save subsampled states
     subsampled_states_path = os.path.join(output_dir, f"{base_name}_subsampled_{N}_states.npy")
-    np.save(subsampled_states_path, subsampled_states)
 
+    save_frames_and_states(subsampled_frames, subsampled_gif_path, subsampled_states, subsampled_states_path)
     print(f"Processed {input_gif_path}: saved subsampled GIF and states to {output_dir}")
 
 # Example usage
 
-if __name__=="__main__":
-    # input_gif_path = "/share/portal/hw575/CrossQ/train_logs/2024-11-25-124432_sb3_sac_envt=door-close-v2-goal-hidden_rm=hand_engineered_nt=ep-len=200_sparse/eval/1000000_rollouts.gif"
-    # output_dir = "ref_seqs/door_close"
-
-    input_gif_path="/share/portal/hw575/CrossQ/create_demo/metaworld_demos/hammer-v2/hammer-v2_corner3_0.gif"
-    output_dir = "../../ref_seqs/door_close_v2"
+def mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices, input_states_path=None):
+    os.makedirs(output_dir, exist_ok=True)
+    base_name = os.path.splitext(os.path.basename(input_gif_path))[0]
     
-    N = 20
-    last_frame = 80
+    frames, states = load_frames_and_states(input_gif_path, input_states_path)
+    subsampled_frames = [frames[idx] for idx in frame_indices]
+    subsampled_states = [states[idx] for idx in frame_indices]
 
-    subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=last_frame)
+    subsampled_gif_path = os.path.join(output_dir, f"{base_name}.gif")
+    subsampled_states_path = os.path.join(output_dir, f"{base_name}_states.npy")
+
+    save_frames_and_states(subsampled_frames, subsampled_gif_path, subsampled_states, subsampled_states_path)
+
+if __name__=="__main__":
+
+    env_name = "metaworld"
+    task_name = "door-close-v2"
+    camera_name = "corner"
+    num_frames = 120
+    mismatched = True
+    
+    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") # default gif path for demos
+    output_dir = get_demo_dir(env_name, task_name, camera_name, num_frames, mismatched) # new gif path
+    
+    frame_indices = list(range(15)) + [31, 43, 44]
+    mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=frame_indices)
+
+    #last_frame = 80
+    #evenly_subsample_gif_and_states(input_gif_path, output_dir, num_frames, last_frame=last_frame)

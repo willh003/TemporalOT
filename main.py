@@ -145,8 +145,7 @@ def run(cfg, wandb_run=None):
         
     expert_pixel = []
     for i in range(cfg.num_demos):
-        # If we have not collected expert trajectories yet
-        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames="d")
+        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames="d", mismatched=cfg.mismatched)
 
         if not os.path.exists(demo_path):
             raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")
@@ -334,7 +333,7 @@ def run(cfg, wandb_run=None):
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
-    tags = [cfg.env_name, cfg.reward_fn]
+    tags = [cfg.env_name, cfg.reward_fn] + ["mismatched" if cfg.mismatched else "matched"]
 
     with wandb.init(
         project="temporal_ot",

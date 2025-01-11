@@ -5,6 +5,7 @@ train_steps: 1000000
 
 env_name: button-press-v2
 camera_name: d
+mismatched: False
 obs_type: features
 num_demos: 2
 context_num: 3

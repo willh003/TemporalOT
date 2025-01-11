@@ -15,9 +15,19 @@ pip install -e .
 
 ## Run Experiments
 
-We need to first generate the expert demo data using `demo/collect_expert_traj.py`. We can optionally configure the environment, number of demos (default 2, as they do in TemporalOT), and camera angle (for default, use "d"). Environment defaults, like cameras and episode lengths, are specified in `demo/constants.py`
+### Collect Expert Data
 
-We can then run the TemporalOT agent using `python main.py`. To change the reward function, simply specify reward_fn in the config or command line. These functions are defined in seq_matching/load_matching_fn.
+We need to first generate the expert demo data using `demo/collect_expert_traj.py`. We can optionally configure the environment, number of demos (default 2, as they do in TemporalOT), and camera angle (for default, use "d"). Environment defaults, like cameras and episode lengths, are specified in `demo/constants.py`. By default, the expert runs are truncated to 
+
+### Subsample Expert Data
+
+To obtain expert runs with mismatched execution, use `subsample_gifs_and_states.py`. You can specify indices of the gif with `mismatched_subsample_gifs_and_states`, or uniformly take N frames from all the frames up to last_frame with `evenly_subsample_gif_and_states`. These runs will be saved under the task and camera with the "mismatched" tag (so if you have multiple mismatched versions for the same task, they will be overwritten).
+
+### Training
+
+After collecting expert trajectories, you can run the TemporalOT agent using `python main.py`. To change the reward function, simply specify reward_fn in the config or command line. These functions are defined in seq_matching/load_matching_fn.
+
+The expert trajectory(s) to use is specified by the environment, camera, and whether or not it is mismatched. If you choose to train with multiple expert trajectories, make sure that you have also generated multiple.
 
 Training configs are stored in configs/ . You can modify them as command line arguments or directly in the config.
 
@@ -27,8 +37,7 @@ python -m demo.collect_expert_traj -e "door-close-v2" -n 2
 python main.py reward_fn="coverage" env_name="door-close-v2" num_demos=2
 ```
 
-Scripts for a single train run or a batched train run over different parameters are available in single.sh and multi.sh.
-
+`single.sh` runs a single train run, and `multi.sh` runs a slurm batch job, allowing you to run with different configurations (especially useful for running baselines and multiple seeds). By default, `multi.sh` will submit jobs to g2, not portal-cornell.
 
 ## Eval
 

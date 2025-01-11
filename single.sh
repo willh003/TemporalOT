@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="door-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+TASK_NAME="door-close-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
 REWARD_FN="coverage"
 MASK_K=10
 SEED=123
-NUM_DEMOS=2
+NUM_DEMOS=1
+MISMATCHED=true
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 DISCOUNT_FACTOR=0.9
 TAU=10
@@ -22,6 +23,7 @@ python main.py \
     env_name=${TASK_NAME} \
     reward_fn=${REWARD_FN} \
     track_progress=${TRACK_PROGRESS} \
+    mismatched=${MISMATCHED} \
     obs_type="features" \
     seed=${SEED} \
     discount_factor=${DISCOUNT_FACTOR} \
