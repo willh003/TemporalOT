@@ -1,16 +1,16 @@
 import os
 
 def get_demo_gif_path(env_name, task_name, camera_name, demo_num, num_frames='d', mismatched=False):
+    if camera_name=="d":
+        camera_name = CAMERA[task_name]
 
-    if mismatched:
-        return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched/{task_name}_{camera_name}_{demo_num}.gif")
-    elif num_frames == "d":
-        return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/default/{task_name}_{camera_name}_{demo_num}.gif")
-    else:
-        return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/frames_{num_frames}/{task_name}_{camera_name}_{demo_num}.gif")
+    dir_path = get_demo_dir(env_name, task_name, camera_name, num_frames, mismatched)
+    return os.path.join(dir_path, f"{task_name}_{camera_name}_{demo_num}.gif")
 
 def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=False):
-    
+    if camera_name=="d":
+        camera_name = CAMERA[task_name]
+
     if mismatched:
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched")
     elif num_frames == "d":

@@ -17,7 +17,8 @@ pip install -e .
 
 ### Collect Expert Data
 
-We need to first generate the expert demo data using `demo/collect_expert_traj.py`. We can optionally configure the environment, number of demos (default 2, as they do in TemporalOT), and camera angle (for default, use "d"). Environment defaults, like cameras and episode lengths, are specified in `demo/constants.py`. By default, the expert runs are truncated to 
+We need to first generate the expert demo data using `demo/collect_expert_traj.py`. We can optionally configure the environment, number of demos (default 2, as they do in TemporalOT), and camera angle (for default, use "d"). Environment defaults, like cameras and episode lengths, are specified in `demo/constants.py`. Demos are saved in `create_demo/{environment}_demo/{task}/...`
+
 
 ### Subsample Expert Data
 

@@ -79,16 +79,20 @@ def mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indic
 if __name__=="__main__":
 
     env_name = "metaworld"
-    task_name = "door-close-v2"
-    camera_name = "corner"
-    num_frames = 120
+    task_name = "door-open-v2"
+    camera_name = "d"
     mismatched = True
     
-    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") # default gif path for demos
-    output_dir = get_demo_dir(env_name, task_name, camera_name, num_frames, mismatched) # new gif path
+    # default gif path for demos
+    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
+    # new gif path
+    output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
     
-    frame_indices = list(range(15)) + [31, 43, 44]
+    #frame_indices = list(range(15)) + [31, 43, 44] # for button-press, door-close, window-open
+    frame_indices = list(range(15)) + [31, 32, 55, 56]
     mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=frame_indices)
 
     #last_frame = 80
+    #num_frames = 120
+    #output_dir = get_demo_dir(env_name, task_name, camera_name, num_frames=num_frames, mismatched=False) # new gif path
     #evenly_subsample_gif_and_states(input_gif_path, output_dir, num_frames, last_frame=last_frame)
