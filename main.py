@@ -119,7 +119,8 @@ def run(cfg, wandb_run=None):
         "ent_reg": cfg.ent_reg,
         "mask_k": cfg.mask_k,
         "sdtw_smoothing": cfg.sdtw_smoothing,
-        "track_progress": cfg.track_progress
+        "track_progress": cfg.track_progress,
+        "threshold": cfg.threshold
     }
     
     reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
@@ -146,7 +147,9 @@ def run(cfg, wandb_run=None):
     # expert demo
     expert_pixel = []
     for i in range(cfg.num_demos):
-        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames="d", mismatched=cfg.mismatched)
+        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched)
+
+        print(f"Loading demo from {demo_path}")
 
         if not os.path.exists(demo_path):
             raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")

@@ -12,7 +12,10 @@ def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=Fa
         camera_name = CAMERA[task_name]
 
     if mismatched:
-        return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched")
+        if num_frames == "d":
+            return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched")
+        else:
+            return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched/subsampled_{num_frames}")
     elif num_frames == "d":
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/default")
     else:
