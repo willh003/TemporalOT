@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="lever-pull-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="coverage" 
+TASK_NAME="button-press-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+REWARD_FN="dtw" 
 MASK_K=10
 SEED=123
 NUM_DEMOS=1
 MISMATCHED=true
-NUM_FRAMES=15 # d for default
+NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 DISCOUNT_FACTOR=0.9
 TAU=10
