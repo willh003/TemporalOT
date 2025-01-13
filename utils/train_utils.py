@@ -12,6 +12,7 @@ from torch.distributions.utils import _standard_normal
 from PIL import Image
 import io
 import matplotlib.pyplot as plt
+from .math_utils import interquartile_mean_and_ci
 
 import cv2
 
@@ -53,20 +54,25 @@ def get_logger(fname: str) -> logging.Logger:
 
 def eval_agent(agent, eval_env, obs_type, episode_num=100):
     final_successes = 0
-    total_successes = 0
+    total_successes = []
 
     observations = []
+    pixels = []
     
     for i in range(episode_num):
         ep_observations = []
+        ep_pixels = []
+        ep_successes = 0
         time_step = eval_env.reset()
         while not time_step.last():
-            total_successes += time_step.observation["goal_achieved"]
+            ep_successes += time_step.observation["goal_achieved"]
             obs = time_step.observation[obs_type]
+            pixel = time_step.observation["pixels_large"]
             
             # save the observations from the first 10 eval episodes
             if i < 10:
                 ep_observations.append(obs)
+                ep_pixels.append(pixel)
 
             with torch.no_grad(), eval_mode(agent):
                 action = agent.act(obs=obs,
@@ -76,14 +82,19 @@ def eval_agent(agent, eval_env, obs_type, episode_num=100):
         
         if i < 10:
             observations.append(np.stack(ep_observations))
+            pixels.append(np.stack(ep_pixels))
         final_successes += time_step.observation["goal_achieved"]
+        total_successes.append(ep_successes)
 
     final_success_rate = final_successes / episode_num # final succcess per episode
-    total_success_rate = total_successes / episode_num # total success per episode
+    total_successes_iqm, total_successes_lower, total_successes_upper = interquartile_mean_and_ci(total_successes)
     final_observations = np.stack(observations)
-    eval_metrics = {"eval/final_success_rate": final_success_rate, "eval/total_success_rate": total_success_rate}
+    final_pixels = np.stack(pixels)
 
-    return eval_metrics, final_observations
+
+    eval_metrics = {"eval/final_success_rate": final_success_rate, "eval/total_success_iqm": total_successes_iqm, "eval/total_success_lower": total_successes_lower, "eval/total_success_upper": total_successes_upper}
+
+    return eval_metrics, final_observations, final_pixels
 
 def plot_train_heatmap(matrix, title):
     # Create a heatmap of the cost matrix with grayscale colormap

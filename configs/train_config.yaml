@@ -19,6 +19,7 @@ sdtw_smoothing: 5
 mask_k: 10
 niter: 100
 
+ads: false
 discount_factor: .9
 expl_noise: .4
 min_expl_noise: 0.0

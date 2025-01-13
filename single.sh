@@ -12,6 +12,7 @@ DISCOUNT_FACTOR=0.9
 TAU=10
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
+ADS=false
 
 # Logging Parameters
 WANDB_MODE="disabled"
@@ -23,6 +24,7 @@ python main.py \
     env_name=${TASK_NAME} \
     reward_fn=${REWARD_FN} \
     track_progress=${TRACK_PROGRESS} \
+    ads=${ADS} \
     mismatched=${MISMATCHED} \
     obs_type="features" \
     seed=${SEED} \

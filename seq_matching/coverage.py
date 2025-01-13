@@ -56,4 +56,4 @@ def compute_coverage_reward(cost_matrix, tau=1):
 
     # final_reward = coverage_scaled_probabilities.sum(axis=1)
     final_reward = covered[:, -1]
-    return final_reward, {"assignment": cost_matrix}
+    return final_reward, {"assignment": covered}

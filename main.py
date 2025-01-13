@@ -16,7 +16,7 @@ from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
                    record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap, AdaptiveDiscount)
 
-from seq_matching import load_matching_fn
+from seq_matching import load_matching_fn, AutomaticDiscountScheduling
 
 from demo import CAMERA, get_demo_gif_path
 from utils.cluster_utils import set_os_vars
@@ -135,6 +135,8 @@ def run(cfg, wandb_run=None):
                         auto_rew_scale_factor=10,
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
+    expl_noise = cfg.expl_noise
+    discount_factor = cfg.discount_factor
 
     # expert demo
     # "d" is a placeholder for the default camera
@@ -161,6 +163,10 @@ def run(cfg, wandb_run=None):
 
     agent.init_demos(cost_encoder, demos)
     logger.info(f"len(demo) = {len(demos)}, demos[0].shape = {demos[0].shape}")
+
+    if cfg.ads:
+        ads = AutomaticDiscountScheduling(horizon=env_horizon, alpha=.2, threshold=.9, progress_start=.2, max_progress_delta=5, ref_score_percentile=50, agent_score_percentile=90, device='cuda')
+        ads.init_demos(demos)
 
     # start training
     global_episode, episode_step, episode_reward = 0, 0, 0
@@ -286,9 +292,9 @@ def run(cfg, wandb_run=None):
         episode_step += 1
 
         # evaluation
-        if t % cfg.eval_period == 0:
-            eval_metrics, final_observations = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
-            
+        if t % cfg.eval_period == 0: 
+            eval_metrics, final_observations, final_pixels = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
+
             # save the observations
             np.save(os.path.join(eval_dir,f"{t}.npy"), final_observations)
 
@@ -306,6 +312,17 @@ def run(cfg, wandb_run=None):
             }
 
             res.append((t, discount(), expl_noise, *(v for v in eval_metrics.values())))
+
+            if cfg.ads:
+                eval_cost_matrices = []
+                for pixel_obs in final_pixels:
+                    _, info = agent.rewarder(pixel_obs)
+                    eval_cost_matrices.append(info["cost_matrix"])
+                
+                ads_discount, info = ads.update(eval_cost_matrices)
+                metrics["tracking/progress"] = info["progress"]
+                metrics["tracking/ads_discount"] = ads_discount
+                metrics["tracking/match_score"] = float(info["match_score"])
 
             if wandb_run is not None:        
                 wandb_run.log(metrics)

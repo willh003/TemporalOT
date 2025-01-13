@@ -8,9 +8,9 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("door-open-v2") # ("button-press-v2" "door-close-v2" "window-open-v2") # "lever-pull-v2" "push-v2" )  # "door-open-v2" )
+TASK_NAME=("stick-push-v2" "door-close-v2" "button-press-v2" "door-open-v2" "window-open-v2" "door-lock-v2") # "lever-pull-v2" "push-v2" )  # "door-open-v2" )
 TAU=1
-REWARD_FN=("coverage" "temporal_ot")  # "final_frame" "temporal_ot" 
+REWARD_FN=("coverage")  # "final_frame" "temporal_ot" 
 SEED=("r" "r") # "r" indicates a random seed
 NUM_DEMOS=1
 MISMATCHED=true
@@ -19,6 +19,7 @@ DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=10
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
+ADS=false
 TRAIN_STEPS=1000000
 
 # Logging Parameters
@@ -53,6 +54,7 @@ python main.py \
     seed=${seed_i} \
     discount_factor=${DISCOUNT_FACTOR} \
     track_progress=${TRACK_PROGRESS} \
+    ads=${ADS} \
     mismatched=${MISMATCHED} \
     num_demos=${NUM_DEMOS} \
     camera_name=${CAMERA_NAME} \
