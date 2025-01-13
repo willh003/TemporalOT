@@ -46,6 +46,7 @@ POLICY = {
     'button-press-topdown-v2': policies.SawyerButtonPressTopdownV2Policy,
     'door-unlock-v2': policies.SawyerDoorUnlockV2Policy,
     'basketball-v2': policies.SawyerBasketballV2Policy,
+    'basketball-v3': policies.SawyerBasketballV2Policy,
     'plate-slide-v2': policies.SawyerPlateSlideV2Policy,
     "hand-insert-v2": policies.SawyerHandInsertV2Policy,  
     "peg-insert-side-v2": policies.SawyerPegInsertionSideV2Policy,  

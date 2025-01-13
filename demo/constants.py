@@ -12,7 +12,10 @@ def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=Fa
         camera_name = CAMERA[task_name]
 
     if mismatched:
-        return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched")
+        if num_frames == "d":
+            return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched")
+        else:
+            return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched/subsampled_{num_frames}")
     elif num_frames == "d":
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/default")
     else:
@@ -31,9 +34,10 @@ CAMERA = {
     'bin-picking-v2': 'corner',
     'button-press-topdown-v2': 'corner',
     'door-unlock-v2': 'corner',
+    'basketball-v2': 'corner',
     'basketball-v3': 'corner',
     'plate-slide-v2': 'corner',
-    'hand-insert-v2': 'corner',
+    'hand-insert-v2': 'corner3', # corner in temporalOT paper
     'peg-insert-side-v2': 'corner3',
     'assembly-v3': 'corner',
     'assembly-v2': 'corner',
@@ -66,6 +70,7 @@ MAX_PATH_LENGTH = {
     'bin-picking-v2': 175,
     'button-press-topdown-v2': 125,
     'door-unlock-v2': 125,
+    'basketball-v2': 175,
     'basketball-v3': 175,
     'plate-slide-v2': 125,
     'hand-insert-v2': 125,

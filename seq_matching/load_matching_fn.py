@@ -6,6 +6,7 @@ from .final_frame import compute_final_frame_reward
 from .optimal_transport import compute_ot_reward
 from .prob import compute_log_probability_reward, compute_probability_reward
 from .temporalot import compute_temporal_ot_reward
+from .threshold import compute_tracking_with_threshold_reward
 
 def load_matching_fn(fn_name, fn_config):
     fn = None 
@@ -30,6 +31,8 @@ def load_matching_fn(fn_name, fn_config):
         fn = lambda cost_matrix: compute_even_distribution_reward(cost_matrix, mask_k=float(fn_config.get("mask_k",0)))
     elif fn_name == "final_frame":
         fn = compute_final_frame_reward
+    elif fn_name == "threshold":
+        fn = lambda cost_matrix: compute_tracking_with_threshold_reward(cost_matrix, threshold=float(fn_config.get("threshold", 0.75)))
     else:
         raise Exception(f"Invalid fn {fn_name}")
     

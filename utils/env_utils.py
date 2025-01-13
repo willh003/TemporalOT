@@ -369,13 +369,13 @@ class ExtendedTimeStepWrapper(dm_env.Environment):
         return getattr(self._env, name)
 
 
-def make_env(name, frame_stack, action_repeat, seed, max_path_length=None, include_timestep=False):
+def make_env(name, camera_name, frame_stack, action_repeat, seed, max_path_length=None, include_timestep=False):
     env_class = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f"{name}-goal-observable"]    
     
     env = env_class(
         seed=seed,
         render_mode="rgb_array",
-        camera_name=CAMERA[name])
+        camera_name=camera_name)
     env._freeze_rand_vec = False
 
     if max_path_length is None:
@@ -383,7 +383,7 @@ def make_env(name, frame_stack, action_repeat, seed, max_path_length=None, inclu
     # add wrappers
     env = RGBArrayAsObservationWrapper(env,
                                        max_path_length=max_path_length,
-                                       camera_name=CAMERA[name],
+                                       camera_name=camera_name,
                                        include_timestep=include_timestep)
     env = ActionDTypeWrapper(env, np.float32)
     env = ActionRepeatWrapper(env, action_repeat)

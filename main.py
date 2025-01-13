@@ -29,7 +29,6 @@ import hydra
 from hydra.core.global_hydra import GlobalHydra
 
 def run(cfg, wandb_run=None):
-
     # random seed
     if cfg.seed == 'r':
         seed = int(np.random.rand() * 1000)
@@ -71,13 +70,21 @@ def run(cfg, wandb_run=None):
         frame_stack = 1
         use_encoder = False
 
+    # "d" is a placeholder for the default camera
+    if cfg.camera_name != "d":
+        camera_name = cfg.camera_name
+    else:
+        camera_name = CAMERA[env_name]
+
     # initialize environments
     train_env, env_horizon = make_env(name=env_name,
+                                      camera_name=camera_name,
                                       frame_stack=frame_stack,
                                       action_repeat=2,
                                       seed=seed,
                                       include_timestep=cfg.include_timestep)
     eval_env, _ = make_env(name=env_name,
+                           camera_name=camera_name,
                            frame_stack=frame_stack,
                            action_repeat=2,
                            seed=seed,
@@ -112,7 +119,8 @@ def run(cfg, wandb_run=None):
         "ent_reg": cfg.ent_reg,
         "mask_k": cfg.mask_k,
         "sdtw_smoothing": cfg.sdtw_smoothing,
-        "track_progress": cfg.track_progress
+        "track_progress": cfg.track_progress,
+        "threshold": cfg.threshold
     }
     
     reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
@@ -139,15 +147,11 @@ def run(cfg, wandb_run=None):
     discount_factor = cfg.discount_factor
 
     # expert demo
-    # "d" is a placeholder for the default camera
-    if cfg.camera_name != "d":
-        camera_name = cfg.camera_name
-    else:
-        camera_name = CAMERA[env_name]
-        
     expert_pixel = []
     for i in range(cfg.num_demos):
-        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames="d", mismatched=cfg.mismatched)
+        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched)
+
+        print(f"Loading demo from {demo_path}")
 
         if not os.path.exists(demo_path):
             raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")

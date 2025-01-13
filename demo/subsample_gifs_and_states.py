@@ -34,7 +34,7 @@ def save_frames_and_states(frames, gif_path, states, states_path):
     )
     np.save(states_path, states)
 
-def evenly_subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, input_states_path=None):
+def evenly_subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, cut_after_N_consecutive_success=None, input_states_path=None):
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(input_gif_path))[0]
@@ -43,6 +43,24 @@ def evenly_subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=No
     if last_frame is not None:
         frames = frames[:last_frame]
         states = states[:last_frame]
+    elif cut_after_N_consecutive_success is not None:
+        # Load the success vector
+        success = np.load(os.path.splitext(input_gif_path)[0] + "_success.npy")
+        print(f"Loaded success vector of length {len(success)}")
+        # Find the beginning of the first N consecutive successes
+        start_idx = 0
+        found_N_consecutive = False
+        while start_idx < len(success) - N:
+            if np.all(success[start_idx:start_idx + N]):
+                found_N_consecutive = True
+                break
+            start_idx += 1
+
+        if not found_N_consecutive:
+            raise ValueError(f"Could not find {N} consecutive successes in {input_gif_path}")
+        
+        frames = frames[:start_idx + N]
+        states = states[:start_idx + N]
 
     num_frames = len(frames)
     if num_frames != states.shape[0]:
@@ -55,8 +73,12 @@ def evenly_subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=No
     subsampled_states = states[selected_indices]
 
     # Save subsampled frames as a new GIF
-    subsampled_gif_path = os.path.join(output_dir, f"{base_name}_subsampled_{N}.gif")
-    subsampled_states_path = os.path.join(output_dir, f"{base_name}_subsampled_{N}_states.npy")
+    file_base_name = f"{base_name}_subsampled_{N}"
+    if cut_after_N_consecutive_success:
+        file_base_name += f"_cut-after-{cut_after_N_consecutive_success}-success"
+
+    subsampled_gif_path = os.path.join(output_dir, f"{file_base_name}.gif")
+    subsampled_states_path = os.path.join(output_dir, f"{file_base_name}_states.npy")
 
     save_frames_and_states(subsampled_frames, subsampled_gif_path, subsampled_states, subsampled_states_path)
     print(f"Processed {input_gif_path}: saved subsampled GIF and states to {output_dir}")
@@ -101,6 +123,8 @@ if __name__=="__main__":
     env_name = "metaworld"
     task_name = "stick-push-v2"
     camera_name = "d"
+    task_name = "door-open-v2"
+    camera_name = "corner3"
     mismatched = True
 
     # denser frame indices (around 20 each)
@@ -119,11 +143,27 @@ if __name__=="__main__":
         output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
 
         mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=sparse_frame_indices[task_name])
+    
+    # default gif path for demos
+    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
+    # new gif path
+    output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
+    
+    #frame_indices = list(range(15)) + [31, 43, 44] # for button-press, door-close, window-open
+    # frame_indices = list(range(5, 18)) + [31, 32, 55, 56, 60, 61] # for lever-pull
+    # frame_indices = list(range(5, 18)) + [21, 22, 31, 32, 55, 56] # for hand-insert
+    # frame_indices = list(range(7, 20)) + [25, 26, 31, 32, 55, 56] # for basketball
+    # frame_indices = list(range(15)) + [31, 32, 55, 56]
+    # mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=frame_indices)
 
     #last_frame = 80
     #num_frames = 120
     #output_dir = get_demo_dir(env_name, task_name, camera_name, num_frames=num_frames, mismatched=False) # new gif path
     #evenly_subsample_gif_and_states(input_gif_path, output_dir, num_frames, last_frame=last_frame)
+
+    ###### For subsampling after N consecutive successes
+    evenly_subsample_gif_and_states(input_gif_path, output_dir, N=15, last_frame=None, cut_after_N_consecutive_success=5)
+
 
 
 
