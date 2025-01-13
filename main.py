@@ -29,7 +29,6 @@ import hydra
 from hydra.core.global_hydra import GlobalHydra
 
 def run(cfg, wandb_run=None):
-
     # random seed
     if cfg.seed == 'r':
         seed = int(np.random.rand() * 1000)
@@ -71,13 +70,21 @@ def run(cfg, wandb_run=None):
         frame_stack = 1
         use_encoder = False
 
+    # "d" is a placeholder for the default camera
+    if cfg.camera_name != "d":
+        camera_name = cfg.camera_name
+    else:
+        camera_name = CAMERA[env_name]
+
     # initialize environments
     train_env, env_horizon = make_env(name=env_name,
+                                      camera_name=camera_name,
                                       frame_stack=frame_stack,
                                       action_repeat=2,
                                       seed=seed,
                                       include_timestep=cfg.include_timestep)
     eval_env, _ = make_env(name=env_name,
+                           camera_name=camera_name,
                            frame_stack=frame_stack,
                            action_repeat=2,
                            seed=seed,
@@ -137,12 +144,6 @@ def run(cfg, wandb_run=None):
                         use_encoder=use_encoder)
 
     # expert demo
-    # "d" is a placeholder for the default camera
-    if cfg.camera_name != "d":
-        camera_name = cfg.camera_name
-    else:
-        camera_name = CAMERA[env_name]
-        
     expert_pixel = []
     for i in range(cfg.num_demos):
         demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames="d", mismatched=cfg.mismatched)

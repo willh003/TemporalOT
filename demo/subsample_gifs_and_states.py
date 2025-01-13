@@ -79,8 +79,8 @@ def mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indic
 if __name__=="__main__":
 
     env_name = "metaworld"
-    task_name = "door-open-v2"
-    camera_name = "d"
+    task_name = "basketball-v2"
+    camera_name = "corner"
     mismatched = True
     
     # default gif path for demos
@@ -89,6 +89,9 @@ if __name__=="__main__":
     output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
     
     #frame_indices = list(range(15)) + [31, 43, 44] # for button-press, door-close, window-open
+    # frame_indices = list(range(5, 18)) + [31, 32, 55, 56, 60, 61] # for lever-pull
+    # frame_indices = list(range(5, 18)) + [21, 22, 31, 32, 55, 56] # for hand-insert
+    # frame_indices = list(range(7, 20)) + [25, 26, 31, 32, 55, 56] # for basketball
     frame_indices = list(range(15)) + [31, 32, 55, 56]
     mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=frame_indices)
 
