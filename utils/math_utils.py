@@ -49,3 +49,8 @@ def interquartile_mean_and_ci(values, confidence=0.95):
     ci_upper = sample_mean + margin_of_error
     
     return interquartile_mean, ci_lower, ci_upper
+
+def mean_and_std(values):
+    mean = np.mean(values)
+    std = np.std(values)
+    return mean, std
