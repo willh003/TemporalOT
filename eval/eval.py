@@ -40,13 +40,15 @@ def plot_multiple_directories(directory_results,
                             output_file: str = 'multi_directory_performance.png',
                             labels: List[str] = [],
                             title: str = "",
-                            smoothing=5):
+                            smoothing=5,
+                            clip_intervals=False):
     """
     Create and save plot comparing performance across multiple directories
     
     Args:
         directory_results: Dictionary mapping directory names to (timesteps, performances) tuples
         output_file: Path to save the output plot
+        clip_intervals: True to plot the intervals in (0.0, 1.0)
     """
     
     # Get a good color palette for the number of directories
@@ -73,8 +75,9 @@ def plot_multiple_directories(directory_results,
         lower_smooth[0] = lower[0]
         upper_smooth[0] = upper[0]
 
-        lower_smooth = np.clip(lower_smooth, a_min=0.0, a_max=1.0)
-        upper_smooth = np.clip(upper_smooth, a_min=0.0, a_max=1.0)
+        if clip_intervals:
+            lower_smooth = np.clip(lower_smooth, a_min=0.0, a_max=1.0)
+            upper_smooth = np.clip(upper_smooth, a_min=0.0, a_max=1.0)
 
         # Plot confidence interval
         plt.fill_between(timesteps, lower_smooth, upper_smooth, color=color, alpha=0.2)
@@ -170,35 +173,42 @@ if __name__ == "__main__":
     plot_folder = "icml_figs"
     plot_smoothing = 5
     base_exp_dir = "/share/portal/wph52/TemporalOT/train_logs"
-    performance_col = "eval/final_success_rate"
+    performance_col = "eval/total_success_rate"
     
     if not os.path.exists(plot_folder):
         os.makedirs(plot_folder)
 
-    exp_folder = FULL_EXPERIMENTS
-    task_experiments = exp_folder[task]
-    reward_types = list(task_experiments.keys())
-    
-    all_task_results = {}
-    for reward_type in reward_types:
-        reward_performances = []
-        for run in task_experiments[reward_type]:
-            
-            df = pd.read_csv(os.path.join(base_exp_dir, run, "eval", "performance.csv"))
-            df.fillna(0, inplace=True)
 
-            # Extract the relevant columns
-            performance_array = df[performance_col].to_numpy()
-            step_array = df["step"].to_numpy()
+    if task == "all":
+        task_set = list(FULL_EXPERIMENTS.keys())
+    else:
+        task_set = [task]
 
-            reward_performances.append(performance_array)
-        reward_performances = np.stack(reward_performances)
-        mean_performance = reward_performances.mean(axis=0)
-        std_performance = reward_performances.std(axis=0)
-        lower = mean_performance - std_performance
-        upper = mean_performance + std_performance
-        all_task_results[reward_type] = (mean_performance, lower, upper, step_array)
-    
-    plot_file = os.path.join(plot_folder, f"{task}.png")
-    plot_multiple_directories(all_task_results, plot_file, reward_types, title=task)
+    for task in task_set:
+        exp_folder = FULL_EXPERIMENTS
+        task_experiments = exp_folder[task]
+        reward_types = list(task_experiments.keys())
+        
+        all_task_results = {}
+        for reward_type in reward_types:
+            reward_performances = []
+            for run in task_experiments[reward_type]:
+                
+                df = pd.read_csv(os.path.join(base_exp_dir, run, "eval", "performance.csv"))
+                df.fillna(0, inplace=True)
+
+                # Extract the relevant columns
+                performance_array = df[performance_col].to_numpy()
+                step_array = df["step"].to_numpy()
+
+                reward_performances.append(performance_array)
+            reward_performances = np.stack(reward_performances)
+            mean_performance = reward_performances.mean(axis=0)
+            std_performance = reward_performances.std(axis=0)
+            lower = mean_performance - std_performance
+            upper = mean_performance + std_performance
+            all_task_results[reward_type] = (mean_performance, lower, upper, step_array)
+        
+        plot_file = os.path.join(plot_folder, f"{task}.png")
+        plot_multiple_directories(all_task_results, plot_file, reward_types, title=task)
 

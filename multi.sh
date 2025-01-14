@@ -56,6 +56,7 @@ echo "Running training for task: ${task_name_i} with seed: ${seed_i}, job ID: \$
 python main.py \
     env_name=${task_name_i} \
     reward_fn=${reward_fn_i} \
+    use_ckpt=${USE_CKPT} \
     obs_type="features" \
     seed=${seed_i} \
     discount_factor=${DISCOUNT_FACTOR} \

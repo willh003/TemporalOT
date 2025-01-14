@@ -5,9 +5,11 @@ TASK_NAME="door-close-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2"
 REWARD_FN="dtw" 
 SEED="r"
 
+USE_CKPT=true
+
 NUM_DEMOS=1
-MISMATCHED=true
-NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
+MISMATCHED=false
+NUM_FRAMES="d" # d for default
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 
 DISCOUNT_FACTOR=0.9
@@ -19,7 +21,7 @@ TRACK_PROGRESS=false
 ADS=false
 
 # Logging Parameters
-WANDB_MODE="online"
+WANDB_MODE="disabled"
 VIDEO_PERIOD=400 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
@@ -41,6 +43,7 @@ python main.py \
     tau=${TAU} \
     threshold=${THRESHOLD} \
     include_timestep=${INCLUDE_TIMESTEP} \
+    use_ckpt=${USE_CKPT} \
     eval_period=${EVAL_PERIOD} \
     model_period=${MODEL_PERIOD} \
     video_period=${VIDEO_PERIOD} \

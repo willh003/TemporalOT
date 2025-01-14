@@ -13,6 +13,7 @@ context_num: 3
 include_timestep: True
 
 reward_fn: coverage
+use_ckpt: false
 track_progress: False
 tau: 1
 ent_reg: .01

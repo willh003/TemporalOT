@@ -108,61 +108,50 @@ sparse_frame_indices = {
     "door-lock-v2": [6, 12, 20, 24, 26, 28, 30, 32]
 }
 
-first_frame_indices = {
-    "window-open-v2": list(range(5)) + list(range(26, 38)) + [49, 50, 51], # window-open try2
+medium_frame_indices = {
+    "window-open-v2": list(range(5)) + list(range(26, 38)) + [49, 50, 51], 
     "button-press-v2": list(range(15)) + [31, 43, 44],
     "door-close-v2": list(range(15)) + [31, 43, 44],
     "door-open-v2":  list(range(15)) + [31, 32, 55, 56],
     "stick-push-v2": list(range(10, 25)) + [49, 50, 51],
     "push-v2": list(range(10, 25)) + [49, 50, 51],
-    "door-lock-v2": list(range(20)) + [28,29,30] + [61, 62] 
+    "door-lock-v2": list(range(20)) + [28,29,30] + [61, 62],
+    "lever-pull-v2": list(range(5, 18)) + [31, 32, 55, 56, 60, 61],
+    "hand-insert-v2": list(range(5, 18)) + [21, 22, 31, 32, 55, 56],
+    "basketball-v2": list(range(7, 20)) + [25, 26, 31, 32, 55, 56]
 }
 
 if __name__=="__main__":
 
     env_name = "metaworld"
-    task_name = "stick-push-v2"
+    task_name = "door-close-v2"
     camera_name = "d"
-    task_name = "door-open-v2"
-    camera_name = "corner3"
     mismatched = True
 
-    # denser frame indices (around 20 each)
-    #frame_indices = list(range(15)) + [31, 43, 44] # for button-press, door-close
-    #frame_indices = list(range(15)) + [31, 32, 55, 56] # for door-open
-    #frame_indices = list(range(5)) + list(range(26, 38)) + [49, 50, 51] # window-open try2
-    #frame_indices = list(range(20)) + [28,29,30] + [61, 62] # door-lock
-    #frame_indices = list(range(10, 25)) + [49, 50, 51] # stick push
-    #frame_indices = list(range(10, 25)) + [49, 50, 51] # push
+    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
+    # new gif path
+    output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
+    #mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=medium_frame_indices[task_name])
 
-    for task_name in sparse_frame_indices.keys():
 
+    for task_name in medium_frame_indices.keys():
         # default gif path for demos
         input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
         # new gif path
         output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
 
-        mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=sparse_frame_indices[task_name])
-    
-    # default gif path for demos
-    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
-    # new gif path
-    output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
-    
-    #frame_indices = list(range(15)) + [31, 43, 44] # for button-press, door-close, window-open
-    # frame_indices = list(range(5, 18)) + [31, 32, 55, 56, 60, 61] # for lever-pull
-    # frame_indices = list(range(5, 18)) + [21, 22, 31, 32, 55, 56] # for hand-insert
-    # frame_indices = list(range(7, 20)) + [25, 26, 31, 32, 55, 56] # for basketball
-    # frame_indices = list(range(15)) + [31, 32, 55, 56]
-    # mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=frame_indices)
-
+        if os.path.exists(input_gif_path):
+            mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=medium_frame_indices[task_name])
+        else:
+            print(f"{task_name} does not exist")
+            
     #last_frame = 80
     #num_frames = 120
     #output_dir = get_demo_dir(env_name, task_name, camera_name, num_frames=num_frames, mismatched=False) # new gif path
     #evenly_subsample_gif_and_states(input_gif_path, output_dir, num_frames, last_frame=last_frame)
 
     ###### For subsampling after N consecutive successes
-    evenly_subsample_gif_and_states(input_gif_path, output_dir, N=15, last_frame=None, cut_after_N_consecutive_success=5)
+    # evenly_subsample_gif_and_states(input_gif_path, output_dir, N=15, last_frame=None, cut_after_N_consecutive_success=5)
 
 
 
