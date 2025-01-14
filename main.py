@@ -11,7 +11,7 @@ import torch
 from dm_env import specs
 from tqdm import tqdm
 
-from models import ResNet, DDPGAgent
+from models import ResNet, DDPGAgent, TEMPORAL_OT_CHECKPOINTS
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
                    record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap, AdaptiveDiscount)
@@ -143,6 +143,12 @@ def run(cfg, wandb_run=None):
                         auto_rew_scale_factor=10,
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
+    if cfg.use_ckpt:
+        assert env_name in TEMPORAL_OT_CHECKPOINTS, f"Error: no checkpoint for task {env_name}"
+        ckpt = TEMPORAL_OT_CHECKPOINTS[env_name]
+        snapshot = torch.load(ckpt)
+        agent.load_snapshot(snapshot)
+    
     expl_noise = cfg.expl_noise
     discount_factor = cfg.discount_factor
 
@@ -150,7 +156,6 @@ def run(cfg, wandb_run=None):
     expert_pixel = []
     for i in range(cfg.num_demos):
         demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched)
-
         print(f"Loading demo from {demo_path}")
 
         if not os.path.exists(demo_path):
@@ -267,7 +272,8 @@ def run(cfg, wandb_run=None):
             episode_reward = 0
 
         # for the first 2000 steps, just randomly sample actions. Then start querying the agent.
-        if t <= 2000:
+        # If initializing with a checkpoint, then start with that
+        if t <= 2000 and not cfg.use_ckpt:
             action = train_env.action_space.sample()
         else:
             with torch.no_grad(), eval_mode(agent):

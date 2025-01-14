@@ -8,12 +8,13 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("stick-push-v2" "door-close-v2" "button-press-v2" "door-open-v2" "window-open-v2" "door-lock-v2") # "lever-pull-v2" "push-v2" )  # "door-open-v2" )
+TASK_NAME=("door-close-v2") #("stick-push-v2" "door-open-v2") #  "door-close-v2" "button-press-v2" "lever-pull-v2" "push-v2" )  # "door-open-v2" )
+REWARD_FN=("temporal_ot" "coverage")  # "final_frame" "temporal_ot" 
+SEED=("r") # "r" indicates a random seed
+USE_CKPT=false
 TAU=1
-REWARD_FN=("coverage")  # "final_frame" "temporal_ot" 
-SEED=("r" "r") # "r" indicates a random seed
 NUM_DEMOS=1
-MISMATCHED=true
+MISMATCHED=false
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=10
@@ -50,6 +51,7 @@ echo "Running training for task: ${task_name_i} with seed: ${seed_i}, job ID: \$
 python main.py \
     env_name=${task_name_i} \
     reward_fn=${reward_fn_i} \
+    use_ckpt=${USE_CKPT} \
     obs_type="features" \
     seed=${seed_i} \
     discount_factor=${DISCOUNT_FACTOR} \

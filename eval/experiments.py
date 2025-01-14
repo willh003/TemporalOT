@@ -68,5 +68,28 @@ FULL_EXPERIMENTS = {
             "2024-12-30-00-21-01-070683_envt=window-open-v2_rm=final_frame_9319d4",
             "2024-12-30-00-20-56-924809_envt=window-open-v2_rm=final_frame_a8aa1d"
         ]
+    },
+    "lever-pull-v2": {
+        "Coverage": [
+            "2024-12-30-23-43-12-427261_envt=lever-pull-v2_rm=coverage_ee2c2c",
+            "2024-12-30-23-43-12-615514_envt=lever-pull-v2_rm=coverage_c98b51",
+            "2024-12-30-23-43-12-848767_envt=lever-pull-v2_rm=coverage_d1a4b9",
+            "2024-12-30-23-43-11-864747_envt=lever-pull-v2_rm=coverage_97a1ba",
+            "2024-12-30-23-43-10-728463_envt=lever-pull-v2_rm=coverage_d657d6"
+        ],
+        "TemporalOT": [
+            "2024-12-30-23-43-14-899372_envt=lever-pull-v2_rm=temporal_ot_8544f2",
+            "2024-12-30-23-43-12-778561_envt=lever-pull-v2_rm=temporal_ot_3487b3",
+            "2024-12-30-23-43-10-040533_envt=lever-pull-v2_rm=temporal_ot_0ed4cb",
+            "2024-12-30-23-43-06-594424_envt=lever-pull-v2_rm=temporal_ot_0c9280",
+            "2024-12-30-23-43-06-593443_envt=lever-pull-v2_rm=temporal_ot_e4d37c"
+        ],
+        "Final Frame": [
+            "2024-12-30-23-42-44-325986_envt=lever-pull-v2_rm=final_frame_e7c0cc",
+            "2024-12-30-23-42-44-325234_envt=lever-pull-v2_rm=final_frame_6a165e",
+            "2024-12-30-23-42-37-363570_envt=lever-pull-v2_rm=final_frame_73d259",
+            "2024-12-30-23-42-33-663751_envt=lever-pull-v2_rm=final_frame_7c373e",
+            "2024-12-30-23-42-33-664358_envt=lever-pull-v2_rm=final_frame_dcd118"
+        ]
     }
 }
