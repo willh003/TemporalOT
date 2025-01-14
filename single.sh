@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="lever-pull-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+TASK_NAME="door-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
 REWARD_FN="coverage" 
 USE_CKPT=true
 MASK_K=10

@@ -234,8 +234,8 @@ def run(cfg, wandb_run=None):
 
             # use first episode to normalize rewards
             if global_episode == 1:
-                rewards_sum = abs(rewards.sum())
                 
+                rewards_sum = abs(rewards.sum())
                 agent.set_reward_scale(1 / (rewards_sum+1e-5))
                 logger.info(f"agent.sinkhorn_rew_scale = {agent.get_reward_scale():.3f}")
                 rewards, info = agent.rewarder(pixels)
@@ -283,11 +283,14 @@ def run(cfg, wandb_run=None):
                                    expl_noise=expl_noise,
                                    eval_mode=False)
         
-        # after 6000 steps, start updating agent
-        if t > 500: #6000:
+        if t > 6000: 
+            # after 6000 steps, start updating agent
             if replay_iter is None:
                 replay_iter = iter(replay_loader)
             discount_factor = agent.update(replay_iter, discount())
+        elif t > 500 and cfg.use_ckpt:
+            # if using a pretrained model, only update the critic for the first steps, to avoid drops in performance off the bat 
+            discount_factor = agent.update(replay_iter, discount(), update_actor=False)
 
         # take env step
         time_step = train_env.step(action)
@@ -362,7 +365,7 @@ def run(cfg, wandb_run=None):
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
-    tags = [cfg.env_name, cfg.reward_fn] + ["mismatched" if cfg.mismatched else "matched"]
+    tags = [cfg.env_name, cfg.reward_fn] + ["mismatched" if cfg.mismatched else "matched"] + (["pretrained"] if cfg.use_ckpt else [])
 
     with wandb.init(
         project="temporal_ot",

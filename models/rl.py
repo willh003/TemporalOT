@@ -217,7 +217,8 @@ class DDPGAgent:
         actor_loss.backward()
         self.actor_opt.step()
 
-    def update(self, replay_iter, gamma):
+    def update(self, replay_iter, gamma, update_actor=True):
+        
         self.update_cnt += 1
         if self.update_cnt & 1: return None # do not update every other step (double stepping)
 
@@ -243,7 +244,8 @@ class DDPGAgent:
         self.update_critic(obs, action, reward, discount, next_obs)
 
         # update actor
-        self.update_actor(obs.detach())
+        if update_actor:
+            self.update_actor(obs.detach())
 
         # update critic target
         soft_update_params(self.critic,
