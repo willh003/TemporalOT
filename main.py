@@ -289,6 +289,8 @@ def run(cfg, wandb_run=None):
                 replay_iter = iter(replay_loader)
             discount_factor = agent.update(replay_iter, discount())
         elif t > 500 and cfg.use_ckpt:
+            if replay_iter is None:
+                replay_iter = iter(replay_loader)
             # if using a pretrained model, only update the critic for the first steps, to avoid drops in performance off the bat 
             discount_factor = agent.update(replay_iter, discount(), update_actor=False)
 
