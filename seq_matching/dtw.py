@@ -29,7 +29,7 @@ def compute_dtw_reward(cost_matrix):
     dtw_cost = np.sum(cost_matrix * normalized_path, axis=1)  # size: (train_freq,)
     final_reward = -dtw_cost
 
-    return final_reward, normalized_path
+    return final_reward, {"assignment": normalized_path}
 
 def _dtw(cost_matrix):
     l1, l2 = cost_matrix.shape

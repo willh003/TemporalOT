@@ -303,10 +303,12 @@ def run(cfg, wandb_run=None):
 
         # evaluation
         if t % cfg.eval_period == 0: 
-            eval_metrics, final_observations, final_pixels = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
+            eval_metrics, final_observations, final_pixels, total_successes = eval_agent(agent, eval_env, cfg.obs_type, cfg.n_eval_episodes)
 
             # save the observations
             np.save(os.path.join(eval_dir,f"{t}.npy"), final_observations)
+            # save the successes for future calculations
+            np.save(os.path.join(eval_dir,f"{t}_return.npy"), total_successes)
 
             metrics = {"train/step": t, 
                     "train/global_episode": global_episode,
