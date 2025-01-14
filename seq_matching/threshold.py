@@ -1,6 +1,6 @@
 import numpy as np
 
-def compute_tracking_with_threshold_reward(cost_matrix, threshold=0.75):
+def compute_tracking_with_threshold_reward(cost_matrix, threshold=0.9):
     """
     For each subgoal, the reward is exp(-cost)
 

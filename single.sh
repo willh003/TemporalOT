@@ -1,17 +1,19 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="button-press-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+TASK_NAME="door-close-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
 REWARD_FN="dtw" 
-MASK_K=10
-SEED=123
+SEED="r"
+
 NUM_DEMOS=1
 MISMATCHED=true
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
+
 DISCOUNT_FACTOR=0.9
+MASK_K=10
 TAU=10
-THRESHOLD=0.85 # only used by the baseline "threshold", which track the progress based on the threshold
+THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false

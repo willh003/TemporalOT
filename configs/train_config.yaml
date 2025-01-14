@@ -18,7 +18,7 @@ tau: 1
 ent_reg: .01
 sdtw_smoothing: 5
 mask_k: 10
-threshold: 0.75
+threshold: 0.9
 niter: 100
 
 ads: false

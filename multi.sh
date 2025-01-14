@@ -8,18 +8,24 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("stick-push-v2" "door-close-v2" "button-press-v2" "door-open-v2" "window-open-v2" "door-lock-v2") # "lever-pull-v2" "push-v2" )  # "door-open-v2" )
-TAU=1
-REWARD_FN=("coverage")  # "final_frame" "temporal_ot" 
-SEED=("r" "r") # "r" indicates a random seed
+TASK_NAME=("stick-push-v2" "door-lock-v2")
+REWARD_FN=("temporal_ot") #, "threshold")  # "final_frame" "temporal_ot"
+SEED=("r") # "r" indicates a random seed
+
 NUM_DEMOS=1
-MISMATCHED=true
+MISMATCHED=false
+NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
+
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=10
+TAU=1
+THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
+
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
+
 TRAIN_STEPS=1000000
 
 # Logging Parameters
