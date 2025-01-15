@@ -8,7 +8,7 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("lever-pull-v2" "door-open-v2" "window-open-v2" "button-press-v2") # ("button-press-v2" "lever-pull-v2" "window-open-v2")  #  "door-close-v2" "button-press-v2" "lever-pull-v2" "push-v2" )  # "door-open-v2" )
+TASK_NAME=("lever-pull-v2" "door-open-v2" "window-open-v2" "button-press-v2") # 
 REWARD_FN=("coverage" "temporal_ot")  # "final_frame" "temporal_ot" 
 SEED=("r") # "r" indicates a random seed
 USE_CKPT=true

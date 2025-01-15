@@ -147,6 +147,10 @@ def run(cfg, wandb_run=None):
         assert env_name in TEMPORAL_OT_CHECKPOINTS, f"Error: no checkpoint for task {env_name}"
         ckpt = TEMPORAL_OT_CHECKPOINTS[env_name]
         snapshot = torch.load(ckpt)
+        
+        # only load the actor, not the critic (since reward function may change)
+        del snapshot["critic"] 
+        del snapshot["critic_opt"]
         agent.load_snapshot(snapshot)
     
     expl_noise = cfg.expl_noise
@@ -283,16 +287,15 @@ def run(cfg, wandb_run=None):
                                    expl_noise=expl_noise,
                                    eval_mode=False)
         
-        if t > 6000: 
+        if t > 500: 
             # after 6000 steps, start updating agent
             if replay_iter is None:
                 replay_iter = iter(replay_loader)
-            discount_factor = agent.update(replay_iter, discount())
-        elif t > 500 and cfg.use_ckpt:
-            if replay_iter is None:
-                replay_iter = iter(replay_loader)
-            # if using a pretrained model, only update the critic for the first steps, to avoid drops in performance off the bat 
-            discount_factor = agent.update(replay_iter, discount(), update_actor=False)
+            if t < 6000 and cfg.use_ckpt:
+                # if using a pretrained model, only update the critic for the first steps, to avoid drops in performance off the bat 
+                discount_factor = agent.update(replay_iter, discount(), update_actor=False)
+            else:
+                discount_factor = agent.update(replay_iter, discount())
 
         # take env step
         time_step = train_env.step(action)
