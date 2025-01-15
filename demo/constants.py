@@ -1,13 +1,29 @@
 import os
 
-def get_demo_gif_path(env_name, task_name, camera_name, demo_num, num_frames='d', mismatched=False):
+def get_demo_gif_path(env_name, task_name, camera_name, demo_num, num_frames='d', mismatched=False, random_mismatched_info={}):
+    """
+    Parameters:
+    - random_mismatched_info: If we are getting demo for random mismatched trajectory. Should have the keys:
+        {
+            'mismatch_level': '1outof5_mismatched', # options: '1outof5_mismatched', '2outof5_mismatched', '3outof5_mismatched'
+            'run_num': 0
+        }
+    """
     if camera_name=="d":
         camera_name = CAMERA[task_name]
 
-    dir_path = get_demo_dir(env_name, task_name, camera_name, num_frames, mismatched)
+    dir_path = get_demo_dir(env_name, task_name, camera_name, num_frames, mismatched, random_mismatched_info)
     return os.path.join(dir_path, f"{task_name}_{camera_name}_{demo_num}.gif")
 
-def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=False):
+def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=False, random_mismatched_info={}):
+    """
+    Parameters:
+    - random_mismatched_info: If we are getting demo for random mismatched trajectory. Should have the keys:
+        {
+            'mismatch_level': '1outof5_mismatched', # options: '1outof5_mismatched', '2outof5_mismatched', '3outof5_mismatched'
+            'run_num': 0
+        }
+    """
     if camera_name=="d":
         camera_name = CAMERA[task_name]
 
@@ -16,6 +32,11 @@ def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=Fa
             return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched")
         else:
             return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/mismatched/subsampled_{num_frames}")
+    elif random_mismatched_info != {}:
+        # one of '1outof5_mismatched', '2outof5_mismatched', '3outof5_mismatched'
+        mismatch_level = random_mismatched_info['mismatch_level']
+        run_num = int(random_mismatched_info['run_num'])
+        return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/random_mismatched/{mismatch_level}/{mismatch_level}_{run_num}")
     elif num_frames == "d":
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/default")
     else:

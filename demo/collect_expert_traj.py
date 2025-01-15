@@ -81,7 +81,7 @@ def record_video(fname, large_images):
     # Save the video as a gif
     imageio.mimsave(f"{fname}.gif", large_images, duration=1/30, loop=0)
 
-def collect_trajectories(env_name, num_demos, camera_name):
+def collect_trajectories(env_name, num_demos, camera_name, skip_frames=0):
     # For some tasks, we want to stop the robot after the goal is achieved
     #   (We specifically set the action to zero)
     stop = CLEAR_ACTION_AFTER_SUCCESS.get(env_name, False)
@@ -160,7 +160,7 @@ def collect_trajectories(env_name, num_demos, camera_name):
 
         ep_name = f"{env_name}_{camera_name}_{episode}"
 
-        record_video(f"{env_folder}/{ep_name}", large_images[::2])
+        record_video(f"{env_folder}/{ep_name}", large_images[::skip_frames+1])
 
         # You can write a task-dependent criterion to filter the generated trajectories!!!
         if goal_achieved == 0:
@@ -175,7 +175,7 @@ def collect_trajectories(env_name, num_demos, camera_name):
         # Save the observations
         with open(f"{env_folder}/{ep_name}_states.npy", "wb") as f:
             # Originally it's (num_steps, obs_size), but seq_utils.py expects (num_steps, n_envs, obs_size)
-            observations = np.array(observations)[:, np.newaxis, :][::2]
+            observations = np.array(observations)[:, np.newaxis, :][::skip_frames+1]
             print(f"Saving states with shape {observations.shape}")
             np.save(f, observations)
 
@@ -200,6 +200,7 @@ if __name__=="__main__":
     parser.add_argument("-e", "--env_name", type=str, default="hammer-v2")
     parser.add_argument("-n", "--num_demos", type=int, default=2)
     parser.add_argument("-c", "--camera_name", type=str, default="d", choices=["d", "corner", "corner2", "corner3", "corner4"])
+    parser.add_argument("-s", "--skip_frames", type=int, default=1, help="Number of frames to skip (0 means not skipping any frame; 1 means getting every other frame)")
     args = parser.parse_args()
 
     num_demos = args.num_demos
@@ -212,4 +213,4 @@ if __name__=="__main__":
         camera_name = CAMERA[env_name]
 
 
-    collect_trajectories(env_name, num_demos, camera_name)
+    collect_trajectories(env_name, num_demos, camera_name, skip_frames=args.skip_frames)
