@@ -118,7 +118,7 @@ def create_random_mismatch_trajs(input_gif_path, mismatch_level, num_of_sections
 
 if __name__ == "__main__":
     env_name = "metaworld"
-    task_name = "window-open-v2"
+    task_name = "door-open-v2"
     camera_name = "d"
     mismatch_level = [1, 3, 5]
     num_of_sections = 5 # How many subsection to partition the demo into

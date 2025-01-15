@@ -8,14 +8,21 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("stick-push-v2" "door-lock-v2")
-REWARD_FN=("temporal_ot") #, "threshold")  # "final_frame" "temporal_ot"
+TASK_NAME=("door-open-v2")
+REWARD_FN=("temporal_ot" "coverage") # "threshold")  # "final_frame" "temporal_ot"
 SEED=("r") # "r" indicates a random seed
+
+USE_CKPT=false
 
 NUM_DEMOS=1
 MISMATCHED=false
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
+# Parameters for random mismatched demos
+RANDOM_MISMATCHED=false 
+NUM_SECS=5  # Only used if RANDOM_MISMATCHED=true
+MISMATCHED_LEVEL=5  # Only used if RANDOM_MISMATCHED=true
+RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=10
@@ -63,6 +70,12 @@ python main.py \
     track_progress=${TRACK_PROGRESS} \
     ads=${ADS} \
     mismatched=${MISMATCHED} \
+    num_frames=${NUM_FRAMES} \
+    random_mismatched=${RANDOM_MISMATCHED} \
+    num_secs=${NUM_SECS} \
+    mismatched_level=${MISMATCHED_LEVEL} \
+    random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
+    obs_type="features" \
     num_demos=${NUM_DEMOS} \
     camera_name=${CAMERA_NAME} \
     mask_k=${MASK_K} \

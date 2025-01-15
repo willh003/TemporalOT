@@ -155,7 +155,15 @@ def run(cfg, wandb_run=None):
     # expert demo
     expert_pixel = []
     for i in range(cfg.num_demos):
-        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched)
+        if cfg.random_mismatched:
+            random_mismatched_info = {
+                'mismatch_level': f'{cfg.mismatched_level}outof{cfg.num_secs}_mismatched',
+                'run_num': int(cfg.random_mismatched_run_num)
+            }
+        else:
+            random_mismatched_info = {}
+
+        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched, random_mismatched_info=random_mismatched_info)
         print(f"Loading demo from {demo_path}")
 
         if not os.path.exists(demo_path):
@@ -283,8 +291,8 @@ def run(cfg, wandb_run=None):
                                    expl_noise=expl_noise,
                                    eval_mode=False)
         
-        if t > 6000: 
-            # after 6000 steps, start updating agent
+        if t > 500: 
+            # after 500 steps, start updating agent
             if replay_iter is None:
                 replay_iter = iter(replay_loader)
             discount_factor = agent.update(replay_iter, discount())
@@ -365,7 +373,13 @@ def run(cfg, wandb_run=None):
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
-    tags = [cfg.env_name, cfg.reward_fn] + ["mismatched" if cfg.mismatched else "matched"] + (["pretrained"] if cfg.use_ckpt else [])
+    tags = [cfg.env_name, cfg.reward_fn] + (["pretrained"] if cfg.use_ckpt else [])
+    if cfg.mismatched:
+        tags.append("mismatched")
+    elif cfg.random_mismatched:
+        tags.append(f"random_mismatched_{cfg.mismatched_level}outof{cfg.num_secs}")
+    else:
+        tags.append("matched")
 
     with wandb.init(
         project="temporal_ot",

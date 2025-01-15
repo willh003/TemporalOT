@@ -1,27 +1,33 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="door-close-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="dtw" 
+TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+REWARD_FN="coverage" 
 SEED="r"
 
-USE_CKPT=true
+USE_CKPT=false
 
 NUM_DEMOS=1
 MISMATCHED=false
 NUM_FRAMES="d" # d for default
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
+# Parameters for random mismatched demos
+RANDOM_MISMATCHED=false 
+NUM_SECS=5  # Only used if RANDOM_MISMATCHED=true
+MISMATCHED_LEVEL=3  # Only used if RANDOM_MISMATCHED=true
+RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 
 DISCOUNT_FACTOR=0.9
 MASK_K=10
 TAU=10
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
+
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
 # Logging Parameters
-WANDB_MODE="disabled"
+WANDB_MODE="online"
 VIDEO_PERIOD=400 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
@@ -33,6 +39,10 @@ python main.py \
     ads=${ADS} \
     mismatched=${MISMATCHED} \
     num_frames=${NUM_FRAMES} \
+    random_mismatched=${RANDOM_MISMATCHED} \
+    num_secs=${NUM_SECS} \
+    mismatched_level=${MISMATCHED_LEVEL} \
+    random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
     obs_type="features" \
     seed=${SEED} \
     discount_factor=${DISCOUNT_FACTOR} \
