@@ -8,9 +8,10 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("door-open-v2")
-REWARD_FN=("temporal_ot" "coverage") # "threshold")  # "final_frame" "temporal_ot"
-SEED=("r") # "r" indicates a random seed
+# All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
+TASK_NAME=("door-open-v2", "lever-pull-v2")
+REWARD_FN=("coverage") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
+SEED=("r" "r") # "r" indicates a random seed
 
 USE_CKPT=false
 
