@@ -18,12 +18,12 @@ for index, row in df.iterrows():
     if isinstance(path, str) and os.path.exists(path):
         checkpoint_path[task_name][int(row['Runs'])] = {
             "path": row['TemporalOT'],
-            "used": False
+            "used": "unclaimed" # unclaimed, claimed, completed
         }
     else:
         checkpoint_path[task_name][int(row['Runs'])] = {
             "path": '',
-            "used": False
+            "used": "unclaimed" # unclaimed, claimed, completed
         }
 
 with open("utils/temporalot_checkpoint_path.json", 'w') as f:
