@@ -13,7 +13,9 @@ csv_file = os.path.join("eval/eval_path_csv", f"{args.domain}_{'mismatched' if a
 df = pd.read_csv(csv_file)
 
 # Columns for approaches
-approaches = ["Threshold", "RoboCLIP", "OT", "TemporalOT", "DTW", "ORCA"]
+approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA"]
+if not args.mismatched:
+    approaches.append("ORCA+TOT pretrained (500k-500k)")
 
 # Initialize a dictionary to store results
 results = {}
@@ -30,7 +32,10 @@ for index, row in df.iterrows():
         path = row[approach]
         if isinstance(path, str) and os.path.exists(path):
             # Assume each folder contains a file named `results.txt` with a single float value
-            final_eval_path = os.path.join(path, "eval", "1000000_return.npy")
+            if approach == "ORCA+TOT pretrained (500k-500k)":
+                final_eval_path = os.path.join(path, "eval", "500000_return.npy")
+            else:
+                final_eval_path = os.path.join(path, "eval", "1000000_return.npy")
 
             try:
                 with open(final_eval_path, 'rb') as file:
@@ -56,6 +61,22 @@ for task_key, approaches_data in results.items():
         curr_task_results[approach] = f"{mean_val:.3f} ({std_val:.3f})"
     
     aggregated_results.append(curr_task_results)
+
+total_task_results = {"Difficulty Level": "Total", "Task": "Total"}
+
+for approach in approaches:
+    all_values = [value for task_values in results.values() for value in task_values[approach]]
+
+    if all_values:
+        mean_val = np.mean(all_values)
+        std_val = np.std(all_values)
+    else:
+        mean_val = -1
+        std_val = -1
+
+    total_task_results[approach] = f"{mean_val:.3f} ({std_val:.3f})"
+
+aggregated_results.append(total_task_results)
 
 # Convert aggregated results to a DataFrame
 aggregated_df = pd.DataFrame(aggregated_results)
