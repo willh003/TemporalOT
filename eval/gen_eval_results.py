@@ -1,3 +1,13 @@
+"""
+Typical usage: 
+1. Make sure `eval_path_csv` has the updated csvs
+2. In the main directory for TemporalOT, run
+- For matched experiments
+    python -m eval.gen_eval_results -d metaworld -e matched
+- For mismatched experiments
+    python -m eval.gen_eval_results -d metaworld -e mismatched
+"""
+
 import pandas as pd
 import os
 import numpy as np
@@ -50,6 +60,12 @@ if __name__ == "__main__":
             else:
                 print(f"Path {path} does not exist for {approach}")
 
+    """##################################################################################
+
+        Generate the aggregated table
+
+    ##################################################################################"""
+
     # Calculate mean and standard error for each task and approach
     aggregated_results = []
     for task_key, approaches_data in results.items():
@@ -96,6 +112,12 @@ if __name__ == "__main__":
     aggregated_df.to_csv(output_csv, index=False)
 
     print(f"Aggregated results saved to {output_csv}")
+
+    """##################################################################################
+
+        Plot the IQM with standard error
+
+    ##################################################################################"""
 
     # Plotting (the IQM for all the approaches)
     # Set the grid to be under the bars

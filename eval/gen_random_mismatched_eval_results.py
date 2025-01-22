@@ -1,3 +1,10 @@
+"""
+Typical usage: 
+1. Make sure `eval_path_csv` has the updated csvs
+2. In the main directory for TemporalOT, run
+    python -m eval.gen_random_mismatched_eval_results
+"""
+
 import pandas as pd
 import os
 import numpy as np
@@ -53,6 +60,11 @@ for index, row in df.iterrows():
             else:
                 print(f"Path {path} does not exist for {approach}")
 
+"""##################################################################################
+
+     Generate the aggregated table
+
+##################################################################################"""
 
 result_table = []
 """ Structure the table as (where 1outof5, 3outof5, 5outof5 are the mismatch levels):
@@ -113,6 +125,12 @@ output_csv = os.path.join("eval/eval_agg_results", f"metaworld_random_mismatched
 aggregated_df.to_csv(output_csv, index=False)
 
 print(f"Aggregated results saved to {output_csv}")
+
+"""##################################################################################
+
+        Plot a bar plot with mean and standard error
+
+##################################################################################"""
 
 from .eval_constants import APPROACH_COLOR_DICT
 

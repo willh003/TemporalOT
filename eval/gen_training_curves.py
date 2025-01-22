@@ -1,3 +1,15 @@
+"""
+Typical usage: 
+1. Make sure `eval_path_csv` has the updated csvs
+2. Edit `task_to_plot` to set tasks that you want to get training curves for
+3. In the main directory for TemporalOT, run
+- For matched experiments
+    python -m eval.gen_training_curves -d metaworld -e matched
+- For mismatched experiments
+    python -m eval.gen_training_curves -d metaworld -e mismatched
+"""
+
+
 import pandas as pd
 import os
 import numpy as np
@@ -11,9 +23,9 @@ if __name__ == "__main__":
     parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched'], help='Experiment name')
     args = parser.parse_args()
 
-    tasks_to_plot = ["Door-close", "Door-open", "Stick-push"]
+    # tasks_to_plot = ["Door-close", "Door-open", "Stick-push"]
     # All the tasks
-    # tasks_to_plot = ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]
+    tasks_to_plot = ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]
 
     # Load the CSV file
     csv_file = os.path.join("eval/eval_path_csv", f"{args.domain}_{args.exp}.csv")
