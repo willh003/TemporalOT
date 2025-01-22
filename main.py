@@ -174,6 +174,10 @@ def run(cfg, wandb_run=None):
         print(f"Avaialble checkpoints: {available_checkpoints}\nChoosing checkpoint {ckpt_run_num} at {ckpt_path}")
 
         snapshot = torch.load(ckpt_path)
+
+        # only load the actor, not the critic (since reward function may change)
+        # del snapshot["critic"] 
+        # del snapshot["critic_opt"]
         agent.load_snapshot(snapshot)
     
     expl_noise = cfg.expl_noise
@@ -322,10 +326,11 @@ def run(cfg, wandb_run=None):
             # after 500 steps, start updating agent
             if replay_iter is None:
                 replay_iter = iter(replay_loader)
-            discount_factor = agent.update(replay_iter, discount())
-        elif t > 500 and cfg.use_ckpt:
-            # if using a pretrained model, only update the critic for the first steps, to avoid drops in performance off the bat 
-            discount_factor = agent.update(replay_iter, discount(), update_actor=False)
+            if t < 6000 and cfg.use_ckpt:
+                # if using a pretrained model, only update the critic for the first steps, to avoid drops in performance off the bat 
+                discount_factor = agent.update(replay_iter, discount(), update_actor=False)
+            else:
+                discount_factor = agent.update(replay_iter, discount())
 
         # take env step
         time_step = train_env.step(action)
