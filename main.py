@@ -148,7 +148,7 @@ def run(cfg, wandb_run=None):
         with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
             temporalot_checkpoint_path = json.load(f)
 
-        assert env_name in TEMPORAL_OT_CHECKPOINTS, f"Error: no checkpoint for task {env_name}"
+        assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
 
         available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
         
