@@ -27,7 +27,7 @@ TRACK_PROGRESS=false
 ADS=false
 
 # Logging Parameters
-WANDB_MODE="online"
+WANDB_MODE="disabled"
 VIDEO_PERIOD=400 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000

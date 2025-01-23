@@ -8,8 +8,8 @@ MEMORY=35GB
 TIME="8:00:00"
 
 # Training Parameters
-TASK_NAME=("lever-pull-v2" "door-open-v2" "window-open-v2" "button-press-v2") # 
-REWARD_FN=("coverage" "temporal_ot")  # "final_frame" "temporal_ot" 
+TASK_NAME=("door-close-v2" "lever-pull-v2" "button-press-v2" "push-v2") # 
+REWARD_FN=("coverage")  # "final_frame" "temporal_ot" 
 SEED=("r") # "r" indicates a random seed
 
 USE_CKPT=false
@@ -53,8 +53,8 @@ for task_name_i in "${TASK_NAME[@]}"; do
 #SBATCH --gres=gpu:${GPUS}
 #SBATCH --mem=${MEMORY}
 #SBATCH --time=${TIME}
-#SBATCH --output=dump/train_${task_name}_${tau}_%j.out
-#SBATCH --error=dump/train_${task_name}_${tau}_%j.err
+#SBATCH --output=dump/train_${task_name_i}_${reward_fn_i}_%j.out
+#SBATCH --error=dump/train_${task_name_i}_${reward_fn_i}_%j.err
 
 # Capture the Slurm job ID
 job_id=\$SLURM_JOB_ID
