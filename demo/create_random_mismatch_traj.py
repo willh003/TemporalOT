@@ -1,3 +1,7 @@
+"""
+Usage (at the top directory): python -m demo.create_random_mismatch_traj
+"""
+
 import os
 import numpy as np
 import json
@@ -118,7 +122,7 @@ def create_random_mismatch_trajs(input_gif_path, mismatch_level, num_of_sections
 
 if __name__ == "__main__":
     env_name = "metaworld"
-    task_name = "door-open-v2"
+    task_name = "lever-pull-v2"
     camera_name = "d"
     mismatch_level = [1, 3, 5]
     num_of_sections = 5 # How many subsection to partition the demo into

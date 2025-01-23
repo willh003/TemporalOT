@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+TASK_NAME="stick-push-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
 REWARD_FN="coverage" 
 SEED="r"
 
-USE_CKPT=false
+USE_CKPT=true
 
 NUM_DEMOS=1
 MISMATCHED=false
@@ -26,6 +26,8 @@ INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
+TRAIN_STEPS=500000
+
 # Logging Parameters
 WANDB_MODE="disabled"
 VIDEO_PERIOD=400 
@@ -33,6 +35,7 @@ EVAL_PERIOD=10000
 MODEL_PERIOD=100000
 
 python main.py \
+    train_steps=${TRAIN_STEPS} \
     env_name=${TASK_NAME} \
     reward_fn=${REWARD_FN} \
     track_progress=${TRACK_PROGRESS} \

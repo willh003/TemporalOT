@@ -50,7 +50,50 @@ def interquartile_mean_and_ci(values, confidence=0.95):
     
     return interquartile_mean, ci_lower, ci_upper
 
+def interquartile_mean_and_se(values):
+    # Sort the array
+    sorted_values = np.sort(values)
+    
+    # Calculate the first and third quartile
+    Q1 = np.percentile(sorted_values, 25)
+    Q3 = np.percentile(sorted_values, 75)
+    
+    # Get the values between Q1 and Q3 (inclusive)
+    interquartile_values = sorted_values[(sorted_values >= Q1) & (sorted_values <= Q3)]
+    
+    # Compute the interquartile mean
+    interquartile_mean = np.mean(interquartile_values)
+    
+    # Compute the standard error of the mean
+    sem = np.std(interquartile_values) / np.sqrt(len(interquartile_values))
+
+    return interquartile_mean, sem
+
 def mean_and_std(values):
     mean = np.mean(values)
     std = np.std(values)
     return mean, std
+
+def mean_and_se(values):
+    mean = np.mean(values)
+    se = np.std(values) / np.sqrt(len(values))
+    return mean, se
+
+def mean_and_ci(values, confidence=0.95):
+    """Calculate the mean and confidence interval of a list of values"""
+    sample_mean = np.mean(values)
+    sem = stats.sem(values)  # Standard Error of the Mean
+    
+    # Compute the margin of error for the 95% confidence interval
+    margin_of_error = sem * stats.t.ppf((1 + confidence) / 2., len(values)-1)
+    
+    # Compute the confidence interval
+    ci_lower = sample_mean - margin_of_error
+    ci_upper = sample_mean + margin_of_error
+    
+    return sample_mean, ci_lower, ci_upper
+
+def smooth_with_pd_rolling(data, window_size):
+    import pandas as pd
+    data = pd.Series(data)
+    return data.rolling(window=window_size).mean()

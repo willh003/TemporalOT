@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
+import json
 from dm_env import specs
 from tqdm import tqdm
 
@@ -144,13 +145,39 @@ def run(cfg, wandb_run=None):
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
     if cfg.use_ckpt:
-        assert env_name in TEMPORAL_OT_CHECKPOINTS, f"Error: no checkpoint for task {env_name}"
-        ckpt = TEMPORAL_OT_CHECKPOINTS[env_name]
-        snapshot = torch.load(ckpt)
+        with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
+            temporalot_checkpoint_path = json.load(f)
+
+        assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
+
+        available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
         
+        if len(available_checkpoints) == 0:
+            raise Exception(f"No available checkpoints for task {env_name}. Check utils/temporalot_checkpoint_path.json")
+
+        import time
+        wait_time = np.random.choice(range(5, 16))
+        print(f"Waiting for {wait_time} seconds to hopefully help with async")
+        time.sleep(wait_time)
+
+        # Choose a random checkpoint
+        ckpt_idx = np.random.choice(range(len(available_checkpoints)))
+        ckpt_run_num, ckpt_path = available_checkpoints[ckpt_idx]
+
+        # Store it asap for batched job
+        temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "claimed"
+        with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+            json.dump(temporalot_checkpoint_path, f, indent=4)
+
+        ckpt_path = os.path.join(ckpt_path, "models", "500000.pt")
+
+        print(f"Avaialble checkpoints: {available_checkpoints}\nChoosing checkpoint {ckpt_run_num} at {ckpt_path}")
+
+        snapshot = torch.load(ckpt_path)
+
         # only load the actor, not the critic (since reward function may change)
-        del snapshot["critic"] 
-        del snapshot["critic_opt"]
+        # del snapshot["critic"] 
+        # del snapshot["critic_opt"]
         agent.load_snapshot(snapshot)
     
     expl_noise = cfg.expl_noise
@@ -375,6 +402,15 @@ def run(cfg, wandb_run=None):
     # delete buffer
     os.system(f"rm -rf {buffer_dir}")
 
+    # set a run as used if we are using the checkpoint
+    if cfg.use_ckpt:
+        with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
+            temporalot_checkpoint_path = json.load(f)
+
+        temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "completed"
+        with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+            json.dump(temporalot_checkpoint_path, f, indent=4)
+
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
@@ -399,7 +435,7 @@ def run_wandb(cfg):
         run(cfg, wandb_run)
 
 
-@hydra.main(config_path="configs", config_name="train_config")
+@hydra.main(version_base=None, config_path="configs", config_name="train_config")
 def main(cfg: DictConfig):
 
     if cfg.wandb_mode == "disabled":
