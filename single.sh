@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="stick-push-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+TASK_NAME="door-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
 REWARD_FN="coverage" 
 SEED="r"
 
 USE_CKPT=true
 
 NUM_DEMOS=1
-MISMATCHED=false
+MISMATCHED=true
 NUM_FRAMES="d" # d for default
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos

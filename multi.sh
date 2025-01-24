@@ -4,14 +4,14 @@
 PARTITION="gpu"
 CPUS=2
 GPUS=1
-MEMORY=35GB
-TIME="8:00:00"
+MEMORY=45GB
+TIME="10:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
 TASK_NAME=("door-open-v2") 
-REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
-SEED=(298 298 298) # "r" indicates a random seed
+REWARD_FN=("temporal_ot" "coverage") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
+SEED=(693 693) # "r" indicates a random seed
 
 USE_CKPT=false
 
@@ -23,10 +23,11 @@ CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 RANDOM_MISMATCHED=true 
 NUM_SECS=5  # Only used if RANDOM_MISMATCHED=true
 MISMATCHED_LEVEL=5 # Only used if RANDOM_MISMATCHED=true
-RANDOM_MISMATCHED_RUN_NUM=2 # Only used if RANDOM_MISMATCHED=true
+SPEED_TYPE='slow' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
+RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
-MASK_K=4
+MASK_K=10
 TAU=1
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 
@@ -75,6 +76,7 @@ python main.py \
     random_mismatched=${RANDOM_MISMATCHED} \
     num_secs=${NUM_SECS} \
     mismatched_level=${MISMATCHED_LEVEL} \
+    speed_type=${SPEED_TYPE} \
     random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
     obs_type="features" \
     num_demos=${NUM_DEMOS} \
