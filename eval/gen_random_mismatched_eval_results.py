@@ -9,11 +9,19 @@ import pandas as pd
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 from utils.math_utils import mean_and_se
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--speed_type', type=str, required=True, choices=['fast', 'slow', 'mixed'], help='Domain name')
+args = parser.parse_args()
+
 # Load the CSV file
-csv_file = os.path.join("eval/eval_path_csv", f"metaworld_random_ablation.csv")
+speed_type = args.speed_type  # options: 'slow', 'fast', 'mixed'
+
+csv_file = os.path.join("eval/eval_path_csv", f"metaworld_random_{speed_type}_ablation.csv")
 df = pd.read_csv(csv_file)
 
 # Approaches
@@ -94,13 +102,18 @@ for task_name, result_dict in results.items():
 
         result_table.append(curr_task_approach_result)
 
+if speed_type == 'slow':
+    ordered_mismatch_levels = ['5outof5', '3outof5', '1outof5']
+else:
+    ordered_mismatch_levels = ['1outof5', '3outof5', '5outof5']
+
 means_plot = {approach: [] for approach in approaches}
 ses_plot = {approach: [] for approach in approaches}
 
 for approach in approaches:
     total_task_results = {"Task": "Total", "Approach": approach}
 
-    for mismatch_level in ["1outof5", "3outof5", "5outof5"]:
+    for mismatch_level in ordered_mismatch_levels:
         all_values = [value for task_values in results.values() for value in task_values[mismatch_level][approach]]
 
         flatten_all_values = np.concatenate(all_values)
@@ -121,7 +134,7 @@ for approach in approaches:
 aggregated_df = pd.DataFrame(result_table)
 
 # Save the aggregated results to a new CSV
-output_csv = os.path.join("eval/eval_agg_results", f"metaworld_random_mismatched_agg_result.csv")
+output_csv = os.path.join("eval/eval_agg_results", f"metaworld_random_{speed_type}_mismatched_agg_result.csv")
 aggregated_df.to_csv(output_csv, index=False)
 
 print(f"Aggregated results saved to {output_csv}")
@@ -134,9 +147,7 @@ print(f"Aggregated results saved to {output_csv}")
 
 from .eval_constants import APPROACH_COLOR_DICT
 
-mismatched_levels = ['1outof5', '3outof5', '5outof5']
-
-x = np.arange(len(mismatched_levels))  # the label locations
+x = np.arange(len(ordered_mismatch_levels))  # the label locations
 width = 0.35  # the width of the bars
 
 plt.grid(True, linestyle='--', alpha=0.3, zorder=0)
@@ -152,10 +163,16 @@ for i, mean_val in enumerate(means_plot['ORCA']):
     plt.text(i + width/2 + 0.001, mean_val + 0.05, f"{mean_val:.2f}", ha='center', va='bottom', zorder=4, fontsize=16)
 
 # Adding labels, title, and legend
-plt.xlabel('Mismatch Level', fontsize=20)
+plt.xlabel(f'Mismatch Level ({"Sped Up" if speed_type == "fast" else "Slowed Down"})', fontsize=20)
 plt.ylabel('Cumulative Return', fontsize=20)
 # ax.set_title('Total Results for Approaches with Mismatch Levels')
-plt.xticks(x, ["Low", "Medium", "High"], fontsize=16)
+
+ordered_xticks = ["Low", "Medium", "High"]
+if speed_type == 'slow':
+    # reverse the order
+    ordered_xticks = ordered_xticks[::-1]
+plt.xticks(x, ordered_xticks, fontsize=16)
+plt.ylim([0, 18])
 
 plt.legend(fontsize=16)
 
@@ -163,7 +180,7 @@ plt.legend(fontsize=16)
 plt.tight_layout()
 
 # Save the plot
-output_plot = os.path.join("eval/eval_agg_results", f"metaworld_random_mismatched_agg_result.png")
+output_plot = os.path.join("eval/eval_agg_results", f"metaworld_random_{speed_type}_mismatched_agg_result.png")
 plt.savefig(output_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
