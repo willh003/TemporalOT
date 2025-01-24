@@ -55,8 +55,8 @@ for task_name_i in "${TASK_NAME[@]}"; do
 #SBATCH --gres=gpu:${GPUS}
 #SBATCH --mem=${MEMORY}
 #SBATCH --time=${TIME}
-#SBATCH --output=dump/train_${task_name}_${tau}_%j.out
-#SBATCH --error=dump/train_${task_name}_${tau}_%j.err
+#SBATCH --output=dump/train_${task_name_i}_${reward_fn_i}_%j.out
+#SBATCH --error=dump/train_${task_name_i}_${reward_fn_i}_%j.err
 
 # Capture the Slurm job ID
 job_id=\$SLURM_JOB_ID
