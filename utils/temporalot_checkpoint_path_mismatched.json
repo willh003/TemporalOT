@@ -30,7 +30,7 @@
     "door-open-v2": {
         "1": {
             "path": "/share/portal/hw575/TemporalOT/train_logs/2025-01-15-02-10-34-648389_envt=door-open-v2_rm=temporal_ot_6d824a",
-            "used": "claimed"
+            "used": "unclaimed"
         },
         "2": {
             "path": "/share/portal/hw575/TemporalOT/train_logs/2025-01-15-02-10-34-646280_envt=door-open-v2_rm=temporal_ot_5d72f2",

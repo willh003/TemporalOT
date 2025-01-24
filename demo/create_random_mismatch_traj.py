@@ -5,6 +5,8 @@ Usage (at the top directory): python -m demo.create_random_mismatch_traj
 import os
 import numpy as np
 import json
+import copy
+from PIL import Image
 
 from .constants import get_demo_dir, get_demo_gif_path
 from .subsample_gifs_and_states import load_frames_and_states, save_frames_and_states
@@ -25,9 +27,13 @@ Trim the demo after being successful consecutively for 10% of total timesteps
             - ...
 """
 
-MISMATCH_SPEED_LEVELS = [2, 4, 6, 8, 10]
+MISMATCH_SPEED_LEVELS = {
+    "fast": [2, 4, 6, 8, 10],
+    "slow": [-1, -2, -3, -4, -5],  # Number of duplicates
+    "mixed": []
+}
 
-def random_subsample_gif_and_states(input_gif_path, output_dir, mismatch_level, num_of_sections, pct_of_success_needed=0.1):
+def random_subsample_gif_and_states(input_gif_path, output_dir, speed_type, mismatch_level, num_of_sections, pct_of_success_needed=0.1):
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(input_gif_path))[0]
@@ -67,11 +73,29 @@ def random_subsample_gif_and_states(input_gif_path, output_dir, mismatch_level, 
     for i in range(num_of_sections):
         if i in mismatched_section:
             # Randomly select a subsample speed level
-            available_speed_levels = [level for level in MISMATCH_SPEED_LEVELS if level < num_frames_per_section]
+            if mismatch_level == 5:
+                if i == 0:
+                    # Without replacement
+                    available_speed_levels = copy.deepcopy(MISMATCH_SPEED_LEVELS[speed_type])
 
-            speed_level = np.random.choice(available_speed_levels)
+                speed_level = np.random.choice(available_speed_levels)   
+                # Pop the selected speed level
+                available_speed_levels.remove(speed_level) 
+            else:
+                available_speed_levels = [level for level in MISMATCH_SPEED_LEVELS[speed_type] if level < num_frames_per_section]
 
-            subsampled_indices = list(range(i * num_frames_per_section, (i + 1) * num_frames_per_section))[::speed_level]
+                speed_level = np.random.choice(available_speed_levels)
+
+            if speed_level < 0:
+                # We duplicate the frames consecutively
+                # Original indices is 1, 2, 3, 4, 5
+                # And num_of_dup=1, then the duplicated indices is 1, 1, 2, 2, 3, 3, 4, 4, 5, 5
+                num_of_dup = abs(speed_level)
+
+                subsampled_indices = list(range(i * num_frames_per_section, (i + 1) * num_frames_per_section))
+                subsampled_indices = [idx for idx in subsampled_indices for _ in range(num_of_dup + 1)]
+            else:
+                subsampled_indices = list(range(i * num_frames_per_section, (i + 1) * num_frames_per_section))[::speed_level]
 
             print(f"i={i}, speed_level={speed_level}, len={len(subsampled_indices)}, {subsampled_indices}")
 
@@ -97,26 +121,58 @@ def random_subsample_gif_and_states(input_gif_path, output_dir, mismatch_level, 
     print(f"[len={len(mismatched_selected_idx)}] Saving the mismatched trajectory at {output_dir}")
     print("=====================")
 
-    mismatched_frames = [frames[i] for i in mismatched_selected_idx]
-    mismatched_states = states[mismatched_selected_idx]
+    mismatched_frames = []
+    prev_idx = -1
+    for idx in mismatched_selected_idx:
+        frame_arr = np.array(frames[idx].convert('RGB'))
+        if idx == prev_idx:
+            # Add minor perturbation because python gif library (PIL/Imageio) does not support duplicate frames
+            episilon = 0.00000001
+            # noise = np.random.uniform(-episilon, episilon, frame_arr.shape).astype(np.float32)
+            noise = np.zeros(frame_arr.shape)
+            # Randomly pick a channel to perturb
+            noise[:, :, np.random.randint(0, frame_arr.shape[2])] = np.random.uniform(-episilon, episilon, frame_arr.shape[:2]).astype(np.float32)
+
+            # TODO: perturbing one frame is not enough. Adding all the noise might produce too much difference in resnet encoding though. Need to try
+            # noise = np.zeros(frame_arr.shape)
+            # perturb_idx = (np.random.randint(0, frame_arr.shape[0]), np.random.randint(0, frame_arr.shape[1]), np.random.randint(0, frame_arr.shape[2]))
+            # noise[perturb_idx] = np.random.uniform(-episilon, episilon)
+
+            frame_arr = np.clip(frame_arr + noise * 255, 0, 255).astype(np.uint8)
+        
+        mismatched_frames.append(frame_arr)
+        prev_idx = idx
+
+    mismatched_frames = [Image.fromarray(arr) for arr in mismatched_frames]
+    # mismatched_frames = [np.array(frames[i].convert("RGB")) for i in mismatched_selected_idx]
+    mismatched_states = np.array([states[i] for i in mismatched_selected_idx])
+
+    print(f"len(mismatched_frames)={len(mismatched_frames)}, len(mismatched_states)={len(mismatched_states)}")
+
+    # input("before saving")
 
     # Save the mismatched trajectory
-    save_frames_and_states(mismatched_frames, os.path.join(output_dir, f"{base_name}.gif"), mismatched_states, os.path.join(output_dir, f"{base_name}_states.npy"))
+    save_frames_and_states(mismatched_frames, os.path.join(output_dir, f"{base_name}.gif"), mismatched_states, os.path.join(output_dir, f"{base_name}_states.npy"), use_pil = 'fast' == speed_type)
+
+    saved_frames, saved_states = load_frames_and_states(os.path.join(output_dir, f"{base_name}.gif"), os.path.join(output_dir, f"{base_name}_states.npy"))
+
+    if len(saved_frames) != len(mismatched_frames) or len(saved_states) != len(mismatched_states) or len(saved_frames) != len(saved_states):
+        raise ValueError(f"Error in saving the mismatched trajectory: len(saved_frames)={len(saved_frames)}, len(saved_states)={len(saved_states)}")
 
     # Save the mismatched info as json
     with open(os.path.join(output_dir, f"{base_name}_mismatched_info.json"), 'w') as f:
         json.dump(mismatched_info, f, indent=4)
-    
 
-
-def create_random_mismatch_trajs(input_gif_path, mismatch_level, num_of_sections, num_traj):
+def create_random_mismatch_trajs(input_gif_path, speed_type, mismatch_level, num_of_sections, num_traj):
     for i in range(num_traj):
         output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=False, random_mismatched_info=
-                                  {'mismatch_level': f'{mismatch_level}outof{num_of_sections}_mismatched', 
-                                   'run_num': i}) 
+                                  {
+                                    'speed_type': speed_type,
+                                    'mismatch_level': f'{mismatch_level}outof{num_of_sections}_mismatched', 
+                                    'run_num': i}) 
         
         if os.path.exists(input_gif_path):
-            random_subsample_gif_and_states(input_gif_path, output_dir, mismatch_level, num_of_sections)
+            random_subsample_gif_and_states(input_gif_path, output_dir, speed_type, mismatch_level, num_of_sections)
         else:
             print(f"{input_gif_path} does not exist")
 
@@ -124,6 +180,7 @@ if __name__ == "__main__":
     env_name = "metaworld"
     task_name = "lever-pull-v2"
     camera_name = "d"
+    speed_type = 'slow'  # options: 'fast', 'slow', 'mixed'
     mismatch_level = [1, 3, 5]
     num_of_sections = 5 # How many subsection to partition the demo into
     num_traj = 3
@@ -134,6 +191,6 @@ if __name__ == "__main__":
 
     if type(mismatch_level) == list:
         for level in mismatch_level:
-            create_random_mismatch_trajs(input_gif_path, level, num_of_sections, num_traj)
+            create_random_mismatch_trajs(input_gif_path, speed_type, level, num_of_sections, num_traj)
     elif type(mismatch_level) == int:
-        create_random_mismatch_trajs(input_gif_path, mismatch_level, num_of_sections, num_traj)
+        create_random_mismatch_trajs(input_gif_path, speed_type, mismatch_level, num_of_sections, num_traj)

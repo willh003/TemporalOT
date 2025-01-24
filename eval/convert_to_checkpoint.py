@@ -2,7 +2,9 @@ import pandas as pd
 import os
 import json
 
-df = pd.read_csv("/share/portal/hw575/TemporalOT/eval/eval_path_csv/metaworld_matched.csv")
+exp = "mismatched"
+
+df = pd.read_csv(f"/share/portal/hw575/TemporalOT/eval/eval_path_csv/metaworld_{exp}.csv")
 
 checkpoint_path = {}
 
@@ -26,5 +28,5 @@ for index, row in df.iterrows():
             "used": "unclaimed" # unclaimed, claimed, completed
         }
 
-with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+with open(f"utils/temporalot_checkpoint_path_{exp}.json", 'w') as f:
     json.dump(checkpoint_path, f, indent=4)

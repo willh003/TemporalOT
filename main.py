@@ -145,7 +145,14 @@ def run(cfg, wandb_run=None):
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
     if cfg.use_ckpt:
-        with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
+        if cfg.mismatched and not cfg.random_mismatched:
+            exp_type = "mismatched"
+        elif not cfg.mismatched and not cfg.random_mismatched:
+            exp_type = "matched"
+        else:
+            raise Exception("Random mismatched not supported for pretrained models")
+
+        with open(f"./utils/temporalot_checkpoint_path_{exp_type}.json", 'r') as f:
             temporalot_checkpoint_path = json.load(f)
 
         assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
@@ -189,7 +196,8 @@ def run(cfg, wandb_run=None):
         if cfg.random_mismatched:
             random_mismatched_info = {
                 'mismatch_level': f'{cfg.mismatched_level}outof{cfg.num_secs}_mismatched',
-                'run_num': int(cfg.random_mismatched_run_num)
+                'run_num': int(cfg.random_mismatched_run_num),
+                'speed_type': cfg.speed_type
             }
         else:
             random_mismatched_info = {}
@@ -418,7 +426,10 @@ def run_wandb(cfg):
     if cfg.mismatched:
         tags.append("mismatched")
     elif cfg.random_mismatched:
-        tags.append(f"random_mismatched_{cfg.mismatched_level}outof{cfg.num_secs}")
+        if cfg.speed_type == "fast":
+            tags.append(f"random_mismatched_{cfg.mismatched_level}outof{cfg.num_secs}")
+        else:
+            tags.append(f"random_{cfg.speed_type}_mismatched_{cfg.mismatched_level}outof{cfg.num_secs}")
     else:
         tags.append("matched")
 

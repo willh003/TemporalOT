@@ -23,9 +23,9 @@ if __name__ == "__main__":
     parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched'], help='Experiment name')
     args = parser.parse_args()
 
-    # tasks_to_plot = ["Door-close", "Door-open", "Stick-push"]
+    tasks_to_plot = ["Door-open", "Door-close", "Stick-push"]
     # All the tasks
-    tasks_to_plot = ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]
+    # tasks_to_plot = ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]
 
     # Load the CSV file
     csv_file = os.path.join("eval/eval_path_csv", f"{args.domain}_{args.exp}.csv")
@@ -52,6 +52,7 @@ if __name__ == "__main__":
                     run_num = int(row["Runs"])-1  # The csv starts with 1
 
                     for t in range(10000, 1000001, 10000):
+                        
                         eval_path = os.path.join(approach_dir, "eval", f"{t}_return.npy")
 
                         if isinstance(eval_path, str) and os.path.exists(eval_path):
@@ -122,7 +123,7 @@ if __name__ == "__main__":
         plt.title(task.replace("-", " ").title() + f" (ep-len={MAX_PATH_LENGTH[task.lower() + '-v2']})", fontsize=20)
         
         # Save plot
-        plt_save_path = os.path.join("eval/eval_agg_results/eval_training_curves", f"{args.domain}_{args.exp}_{task.lower()}_training_curves.png")
+        plt_save_path = os.path.join(f"eval/eval_agg_results/eval_training_curves_{args.exp}", f"{args.domain}_{args.exp}_{task.lower()}_training_curves.png")
 
         plt.savefig(plt_save_path, dpi=300, bbox_inches='tight')
         plt.close()

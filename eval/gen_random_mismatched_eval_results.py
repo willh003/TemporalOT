@@ -147,9 +147,9 @@ plt.bar(x + width/2, means_plot['ORCA'], width, yerr=ses_plot['ORCA'], label='OR
 
 # Add the mean values on top of the bars
 for i, mean_val in enumerate(means_plot['TemporalOT']):
-    plt.text(i - width/2, mean_val + 0.05, f"{mean_val:.2f}", ha='center', va='bottom', zorder=4, fontsize=16)
+    plt.text(i - width/2 + 0.001, mean_val + 0.05, f"{mean_val:.2f}", ha='center', va='bottom', zorder=4, fontsize=16)
 for i, mean_val in enumerate(means_plot['ORCA']):
-    plt.text(i + width/2, mean_val + 0.05, f"{mean_val:.2f}", ha='center', va='bottom', zorder=4, fontsize=16)
+    plt.text(i + width/2 + 0.001, mean_val + 0.05, f"{mean_val:.2f}", ha='center', va='bottom', zorder=4, fontsize=16)
 
 # Adding labels, title, and legend
 plt.xlabel('Mismatch Level', fontsize=20)

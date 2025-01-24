@@ -340,12 +340,12 @@ class DDPGAgent:
                 self.encoder.parameters(), lr=self.lr)
             self.encoder_opt.load_state_dict(
                 payload["encoder_opt"].state_dict())
-        # self.actor_opt = optim.Adam(
-        #     self.actor.parameters(), lr=self.lr)
-        # self.actor_opt.load_state_dict(
-        #     payload["actor_opt"].state_dict())
-        # self.critic_opt = optim.Adam(
-        #     self.critic.parameters(), lr=self.lr)
-        # self.critic_opt.load_state_dict(
-        #     payload["critic_opt"].state_dict())
+        self.actor_opt = optim.Adam(
+            self.actor.parameters(), lr=self.lr)
+        self.actor_opt.load_state_dict(
+            payload["actor_opt"].state_dict())
+        self.critic_opt = optim.Adam(
+            self.critic.parameters(), lr=self.lr)
+        self.critic_opt.load_state_dict(
+            payload["critic_opt"].state_dict())
 

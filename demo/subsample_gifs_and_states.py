@@ -25,13 +25,19 @@ def load_frames_and_states(input_gif_path, input_states_path=None):
 
     return frames, states
 
-def save_frames_and_states(frames, gif_path, states, states_path):
-    frames[0].save(
-        gif_path,
-        save_all=True,
-        append_images=frames[1:],
-        loop=0
-    )
+def save_frames_and_states(frames, gif_path, states, states_path, use_pil=True):
+    if use_pil:
+        frames[0].save(
+            gif_path,
+            save_all=True,
+            append_images=frames[1:],
+            loop=0
+        )
+    else:
+        import imageio
+
+        imageio.mimsave(gif_path, frames, duration=0.1, loop=0, plugin="pillow", optimize=False, disposal=2)  # duration is in seconds
+
     np.save(states_path, states)
 
 def evenly_subsample_gif_and_states(input_gif_path, output_dir, N, last_frame=None, cut_after_N_consecutive_success=None, input_states_path=None):

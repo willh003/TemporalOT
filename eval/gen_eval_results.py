@@ -156,7 +156,7 @@ if __name__ == "__main__":
         plt.text(approach_name, iqm + 0.005, f"{iqm:.2f}", ha='center', va='bottom', fontsize=16)
 
     plt.xticks(fontsize=16)
-    plt.ylabel('IQM Success Rate', fontsize=20)
+    plt.ylabel('IQM Cumulative Return', fontsize=20)
 
     plt.tight_layout()
 
