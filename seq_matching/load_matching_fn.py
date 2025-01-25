@@ -7,6 +7,7 @@ from .optimal_transport import compute_ot_reward
 from .prob import compute_log_probability_reward, compute_probability_reward
 from .temporalot import compute_temporal_ot_reward
 from .threshold import compute_tracking_with_threshold_reward
+from .roboclip import compute_roboclip_reward
 
 def load_matching_fn(fn_name, fn_config):
     fn = None 
@@ -33,9 +34,12 @@ def load_matching_fn(fn_name, fn_config):
         fn = compute_final_frame_reward
     elif fn_name == "threshold":
         fn = lambda cost_matrix: compute_tracking_with_threshold_reward(cost_matrix, threshold=float(fn_config.get("threshold", 0.75)))
+    elif fn_name == "roboclip":
+        fn = compute_roboclip_reward
     else:
         raise Exception(f"Invalid fn {fn_name}")
-    
+
+    # Note@Roboclip: No need to modify since track_progress=False in the config    
     if fn_config.get('track_progress', False):
 
         def tracking_fn(cost_matrix, lookahead=10):

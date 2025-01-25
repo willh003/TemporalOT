@@ -107,7 +107,8 @@ class DDPGAgent:
                  env_horizon: int = 88,
                  context_num: int = 3,
                  use_encoder: bool = True,
-                 include_timestep: bool = False):
+                 include_timestep: bool = False,
+                 encoder_type: str = "resnet"):
 
         self.reward_fn = reward_fn
         self.include_timestep = include_timestep
@@ -131,6 +132,7 @@ class DDPGAgent:
             repr_dim = self.encoder.repr_dim
         else:
             repr_dim = obs_shape[0]
+        self.encoder_type = encoder_type
             
         self.actor = Actor(repr_dim,
                            action_shape,
@@ -255,29 +257,42 @@ class DDPGAgent:
 
     def init_demos(self, cost_encoder, demos):
         self.cost_encoder = cost_encoder
-        self.demos = [self.get_context_observations(demo) for demo in demos]
+        if self.encoder_type == "roboclip":
+            self.demos = demos
+            from models.roboclip import get_roboclip_encoder
+            encoder = get_roboclip_encoder()
+            # Note: Assumes self.cfg.num_demos == 1
+            self.demo_embeddings = encoder.encode_video(self.demos[0]) # torch.Size([1, 512])
+        else:
+            self.demos = [self.get_context_observations(demo) for demo in demos]
+    
+    def rewarder_roboclip(self, observations):
+        obs = observations # torch.Size([63, 3, 224, 224])
+        if len(self.demo_embeddings) != 1:
+            raise ValueError("demo_embeddings should be a 1D tensor") # Only for 1 demo now
+    
+        rewards, info = self.reward_fn(None, obs, self.demo_embeddings)  # Pass raw frames for obs, embedding for exp
+        return rewards, info
 
     def rewarder(self, observations):
-        scores_list = list()
-        rewards_list = list()
-        assignment_list = list()
-        cost_matrix_list = list()
-        progress_list = list()
+        scores_list = []
+        rewards_list = []
+        assignment_list = []
+        cost_matrix_list = []
+        progress_list = []
+    
         obs = torch.as_tensor(observations).to(self.device)
-
         with torch.no_grad():
             obs = self.cost_encoder(obs)
-        obs = self.get_context_observations(obs)
+        obs = self.get_context_observations(obs) # torch.Size([3, 63, 3, 224, 224])
 
         for exp in self.demos:
-            # context cost matrix
             distance_matrix = 0
-
             for i in range(self.context_num):
                 distance_matrix += cosine_distance(obs[i], exp[i])
             distance_matrix /= self.context_num
-
             rewards, info = self.reward_fn(distance_matrix.cpu().numpy())
+
             assignment = info["assignment"]
             rewards = rewards.astype(np.float32)
             rewards = self.rew_scale * rewards
@@ -288,7 +303,7 @@ class DDPGAgent:
             scores_list.append(np.sum(rewards))
             rewards_list.append(rewards)
             assignment_list.append(assignment)
-            cost_matrix_list.append(distance_matrix.cpu().numpy())
+            cost_matrix_list.append(distance_matrix.cpu().numpy() if not self.encoder_type == "roboclip" else None)
 
         closest_demo_index = np.argmax(scores_list)
 

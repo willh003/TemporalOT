@@ -13,6 +13,7 @@ from dm_env import specs
 from tqdm import tqdm
 
 from models import ResNet, DDPGAgent, TEMPORAL_OT_CHECKPOINTS
+from models.roboclip import RoboClipEncoder
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
                    record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap, AdaptiveDiscount)
@@ -143,49 +144,50 @@ def run(cfg, wandb_run=None):
                         rew_scale=1, # this will be updated after first train iter
                         auto_rew_scale_factor=10,
                         context_num=cfg.context_num,
-                        use_encoder=use_encoder)
-    if cfg.use_ckpt:
-        if cfg.mismatched and not cfg.random_mismatched:
-            exp_type = "mismatched"
-        elif not cfg.mismatched and not cfg.random_mismatched:
-            exp_type = "matched"
-        else:
-            raise Exception("Random mismatched not supported for pretrained models")
+                        use_encoder=use_encoder,
+                        encoder_type="roboclip" if cfg.reward_fn == "roboclip" else "resnet")
+    # if cfg.use_ckpt:
+    #     if cfg.mismatched and not cfg.random_mismatched:
+    #         exp_type = "mismatched"
+    #     elif not cfg.mismatched and not cfg.random_mismatched:
+    #         exp_type = "matched"
+    #     else:
+    #         raise Exception("Random mismatched not supported for pretrained models")
 
-        with open(f"./utils/temporalot_checkpoint_path_{exp_type}.json", 'r') as f:
-            temporalot_checkpoint_path = json.load(f)
+    #     with open(f"./utils/temporalot_checkpoint_path_{exp_type}.json", 'r') as f:
+    #         temporalot_checkpoint_path = json.load(f)
 
-        assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
+    #     assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
 
-        available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
+    #     available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
         
-        if len(available_checkpoints) == 0:
-            raise Exception(f"No available checkpoints for task {env_name}. Check utils/temporalot_checkpoint_path.json")
+    #     if len(available_checkpoints) == 0:
+    #         raise Exception(f"No available checkpoints for task {env_name}. Check utils/temporalot_checkpoint_path.json")
 
-        import time
-        wait_time = np.random.choice(range(5, 16))
-        print(f"Waiting for {wait_time} seconds to hopefully help with async")
-        time.sleep(wait_time)
+    #     import time
+    #     wait_time = np.random.choice(range(5, 16))
+    #     print(f"Waiting for {wait_time} seconds to hopefully help with async")
+    #     time.sleep(wait_time)
 
-        # Choose a random checkpoint
-        ckpt_idx = np.random.choice(range(len(available_checkpoints)))
-        ckpt_run_num, ckpt_path = available_checkpoints[ckpt_idx]
+    #     # Choose a random checkpoint
+    #     ckpt_idx = np.random.choice(range(len(available_checkpoints)))
+    #     ckpt_run_num, ckpt_path = available_checkpoints[ckpt_idx]
 
-        # Store it asap for batched job
-        temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "claimed"
-        with open("utils/temporalot_checkpoint_path.json", 'w') as f:
-            json.dump(temporalot_checkpoint_path, f, indent=4)
+    #     # Store it asap for batched job
+    #     temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "claimed"
+    #     with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+    #         json.dump(temporalot_checkpoint_path, f, indent=4)
 
-        ckpt_path = os.path.join(ckpt_path, "models", "500000.pt")
+    #     ckpt_path = os.path.join(ckpt_path, "models", "500000.pt")
 
-        print(f"Avaialble checkpoints: {available_checkpoints}\nChoosing checkpoint {ckpt_run_num} at {ckpt_path}")
+    #     print(f"Avaialble checkpoints: {available_checkpoints}\nChoosing checkpoint {ckpt_run_num} at {ckpt_path}")
 
-        snapshot = torch.load(ckpt_path)
+    #     snapshot = torch.load(ckpt_path)
 
-        # only load the actor, not the critic (since reward function may change)
-        # del snapshot["critic"] 
-        # del snapshot["critic_opt"]
-        agent.load_snapshot(snapshot)
+    #     # only load the actor, not the critic (since reward function may change)
+    #     # del snapshot["critic"] 
+    #     # del snapshot["critic_opt"]
+    #     agent.load_snapshot(snapshot)
     
     expl_noise = cfg.expl_noise
     discount_factor = cfg.discount_factor
@@ -210,12 +212,17 @@ def run(cfg, wandb_run=None):
 
         data = load_gif_frames(demo_path, "torch")
         expert_pixel.append(data)
-
-    # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
-    cost_encoder = ResNet().to(device)
-    _ = cost_encoder.eval()
-    with torch.no_grad():
-        demos = [cost_encoder(demo.to(device)) for demo in expert_pixel]
+    
+    # encoder: roboclip or resnet
+    if cfg.reward_fn == "roboclip":
+        cost_encoder = RoboClipEncoder(device)
+        demos = expert_pixel # Store raw frames for RoboClip
+    else:
+        # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
+        cost_encoder = ResNet().to(device)
+        cost_encoder.eval()
+        with torch.no_grad():
+            demos = [cost_encoder(demo.to(device)) for demo in expert_pixel]
 
     agent.init_demos(cost_encoder, demos)
     logger.info(f"len(demo) = {len(demos)}, demos[0].shape = {demos[0].shape}")
@@ -239,14 +246,18 @@ def run(cfg, wandb_run=None):
     pbar = tqdm(total=total_timesteps)
     res = [(0, cfg.discount_factor**3, 0)]
     while t <= total_timesteps:
+        print(f"t: {t}, time_step.last(): {time_step.last()}")
         # end of a trajectory
         if time_step.last():
             global_episode += 1            
             pixels = np.stack(pixels, axis=0)
 
-            rewards, info = agent.rewarder(pixels)
-            assignment = info["assignment"]
-            cost_matrix = info["cost_matrix"]
+            if cfg.reward_fn == "roboclip":
+                rewards, info = agent.rewarder_roboclip(pixels)
+            else:
+                rewards, info = agent.rewarder(pixels)
+                assignment = info["assignment"]
+                cost_matrix = info["cost_matrix"]
             if cfg.track_progress:
                 new_discount = .2 ** (1/info["progress"])                
                 discount.set_discount(new_discount)
@@ -256,28 +267,29 @@ def run(cfg, wandb_run=None):
 
                 if wandb_run is not None:
                     wandb_run.log({"train/progress":progress}, commit=False)
+            
+            if cfg.reward_fn != "roboclip":
+                cost_min = cost_matrix.min()
+                cost_max = cost_matrix.max()
+                assert cost_min >= 0 # sanity check
 
-            cost_min = cost_matrix.min()
-            cost_max = cost_matrix.max()
-            assert cost_min >= 0 # sanity check
+                if record_traj:
+                    cost_image = plot_train_heatmap(cost_matrix, "Cost")
+                    assignment_image = plot_train_heatmap(assignment, "Assignment")
 
-            if record_traj:
-                cost_image = plot_train_heatmap(cost_matrix, "Cost")
-                assignment_image = plot_train_heatmap(assignment, "Assignment")
+                    if wandb_run is not None:
+                        wandb_run.log({"trajectory/video":
+                            wandb.Video(np.stack([np.uint8(f).transpose(2, 0, 1) for f in frames]), fps=15)}
+                        )
+                        
+                        wandb_run.log({"trajectory/cost_matrix": wandb.Image(cost_image, caption="Cost Matrix (Grayscale)")})
+                        wandb_run.log({"trajectory/assignment_matrix": wandb.Image(assignment_image, caption="Assignment Matrix (Grayscale)")})
+                    else:
+                        video_fname = f"{video_dir}/{global_episode}.mp4"
+                        imageio.mimsave(video_fname, frames, fps=15)
 
-                if wandb_run is not None:
-                    wandb_run.log({"trajectory/video":
-                        wandb.Video(np.stack([np.uint8(f).transpose(2, 0, 1) for f in frames]), fps=15)}
-                    )
-                    
-                    wandb_run.log({"trajectory/cost_matrix": wandb.Image(cost_image, caption="Cost Matrix (Grayscale)")})
-                    wandb_run.log({"trajectory/assignment_matrix": wandb.Image(assignment_image, caption="Assignment Matrix (Grayscale)")})
-                else:
-                    video_fname = f"{video_dir}/{global_episode}.mp4"
-                    imageio.mimsave(video_fname, frames, fps=15)
-
-                    cost_image.save(f"{video_dir}/cost_{global_episode}.png")
-                    assignment_image.save(f"{video_dir}/cost_{global_episode}.png")
+                        cost_image.save(f"{video_dir}/cost_{global_episode}.png")
+                        assignment_image.save(f"{video_dir}/cost_{global_episode}.png")
 
             # use first episode to normalize rewards
             if global_episode == 1:
@@ -285,15 +297,18 @@ def run(cfg, wandb_run=None):
                 rewards_sum = abs(rewards.sum())
                 agent.set_reward_scale(1 / (rewards_sum+1e-5))
                 logger.info(f"agent.sinkhorn_rew_scale = {agent.get_reward_scale():.3f}")
-                rewards, info = agent.rewarder(pixels)
-                assignment = info["assignment"]
-                cost_matrix = info["cost_matrix"]
+                if cfg.reward_fn == "roboclip":
+                    rewards, info = agent.rewarder_roboclip(pixels)
+                else:
+                    rewards, info = agent.rewarder(pixels)
+                    assignment = info["assignment"]
+                    cost_matrix = info["cost_matrix"]
                 if cfg.track_progress:
                     new_discount = .2 ** (1/info["progress"])
                     discount.set_discount(new_discount)
-                        
-                cost_min = cost_matrix.min()
-                cost_max = cost_matrix.max()
+                if cfg.reward_fn != "roboclip":
+                    cost_min = cost_matrix.min()
+                    cost_max = cost_matrix.max()
 
             # add to buffer at the end of the trajectory
             for i, elt in enumerate(time_steps):
@@ -368,8 +383,8 @@ def run(cfg, wandb_run=None):
                     "rewards/mean_reward": rewards.mean(),
                     "rewards/min_reward": rewards.min(),
                     "rewards/max_reward": rewards.max(),
-                    "rewards/min_distance": cost_min,
-                    "rewards/max_distance": cost_max, 
+                    # "rewards/min_distance": cost_min,
+                    # "rewards/max_distance": cost_max, 
                     "rewards/reward_scale": -agent.get_reward_scale(),
                     **eval_metrics
             }
@@ -410,14 +425,14 @@ def run(cfg, wandb_run=None):
     # delete buffer
     os.system(f"rm -rf {buffer_dir}")
 
-    # set a run as used if we are using the checkpoint
-    if cfg.use_ckpt:
-        with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
-            temporalot_checkpoint_path = json.load(f)
+    # # set a run as used if we are using the checkpoint
+    # if cfg.use_ckpt:
+    #     with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
+    #         temporalot_checkpoint_path = json.load(f)
 
-        temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "completed"
-        with open("utils/temporalot_checkpoint_path.json", 'w') as f:
-            json.dump(temporalot_checkpoint_path, f, indent=4)
+    #     temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "completed"
+    #     with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+    #         json.dump(temporalot_checkpoint_path, f, indent=4)
 
 
 def run_wandb(cfg):
