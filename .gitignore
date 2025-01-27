@@ -12,3 +12,4 @@ wandb/
 icml_figs/
 train_logs/
 MUJOCO_LOG.TXT
+main_fig

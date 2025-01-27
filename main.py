@@ -147,18 +147,25 @@ def run(cfg, wandb_run=None):
     if cfg.use_ckpt:
         if cfg.mismatched and not cfg.random_mismatched:
             exp_type = "mismatched"
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
         elif not cfg.mismatched and not cfg.random_mismatched:
             exp_type = "matched"
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
+        elif cfg.random_mismatched:
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_random_{cfg.speed_type}.json"
         else:
             raise Exception("Random mismatched not supported for pretrained models")
-
-        with open(f"./utils/temporalot_checkpoint_path_{exp_type}.json", 'r') as f:
+        
+        with open(checkpoint_json_path, 'r') as f:
             temporalot_checkpoint_path = json.load(f)
 
         assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
 
-        available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
-        
+        if not cfg.random_mismatched:
+            available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
+        else:
+            available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(cfg.mismatched_level)][str(cfg.seed)]["path"]) for i in range(1)]
+
         if len(available_checkpoints) == 0:
             raise Exception(f"No available checkpoints for task {env_name}. Check utils/temporalot_checkpoint_path.json")
 
@@ -172,8 +179,10 @@ def run(cfg, wandb_run=None):
         ckpt_run_num, ckpt_path = available_checkpoints[ckpt_idx]
 
         # Store it asap for batched job
-        temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "claimed"
-        with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+        if not cfg.random_mismatched:
+            temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "claimed"
+        
+        with open(checkpoint_json_path, 'w') as f:
             json.dump(temporalot_checkpoint_path, f, indent=4)
 
         ckpt_path = os.path.join(ckpt_path, "models", "500000.pt")
@@ -412,11 +421,13 @@ def run(cfg, wandb_run=None):
 
     # set a run as used if we are using the checkpoint
     if cfg.use_ckpt:
-        with open("./utils/temporalot_checkpoint_path.json", 'r') as f:
+        with open(checkpoint_json_path, 'r') as f:
             temporalot_checkpoint_path = json.load(f)
 
-        temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "completed"
-        with open("utils/temporalot_checkpoint_path.json", 'w') as f:
+        if not cfg.random_mismatched:
+            temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "completed"
+        
+        with open(checkpoint_json_path, 'w') as f:
             json.dump(temporalot_checkpoint_path, f, indent=4)
 
 
