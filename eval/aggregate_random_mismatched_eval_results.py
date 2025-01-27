@@ -10,12 +10,14 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import json
 
 from utils.math_utils import mean_and_se
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--speed_type', type=str, required=True, choices=['fast', 'slow', 'mixed'], help='Domain name')
+parser.add_argument('-m', '--metric', type=str, required=False, choices=['std', 'diff', 'cv'], help='Metric to use for clustering')
 args = parser.parse_args()
 
 # Load the CSV file
@@ -26,7 +28,7 @@ df = pd.read_csv(csv_file)
 
 # Approaches
 tasks_to_include = ["Door-open", "Window-open", "Lever-pull"]
-approaches = ["TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+approaches = ["TemporalOT", "ORCA+TOT pretrained (500k-500k)"]
 
 # Initialize a dictionary to store results
 """
@@ -44,6 +46,7 @@ results = {}
 for index, row in df.iterrows():
     task_name = row['Tasks']
     mismatch_level = row['Mismatched Level']
+    run_num = str(row['Run Num'])
 
     if task_name in tasks_to_include:
         # Initialize storage for the task if not already present
@@ -51,7 +54,10 @@ for index, row in df.iterrows():
             results[task_name] = {}
 
         if mismatch_level not in results[task_name]:
-            results[task_name][mismatch_level] = {approach: [] for approach in approaches}
+            results[task_name][mismatch_level] = {}
+
+        if run_num not in results[task_name][mismatch_level]:
+            results[task_name][mismatch_level][run_num] = {approach: [] for approach in approaches}
 
         for approach in approaches:
             path = row[approach]
@@ -65,86 +71,101 @@ for index, row in df.iterrows():
                 try:
                     with open(final_eval_path, 'rb') as file:
                         return_values = np.load(file)
-                        results[task_name][mismatch_level][approach].append(return_values)
+                        results[task_name][mismatch_level][run_num][approach].append(return_values)
                 except Exception as e:
                     print(f"Error reading {final_eval_path}: {e}")
             else:
                 print(f"Path {path} does not exist for {approach}")
 
-"""##################################################################################
 
-     Generate the aggregated table
-
-##################################################################################"""
-
-result_table = []
-""" Structure the table as (where 1outof5, 3outof5, 5outof5 are the mismatch levels):
-
-task_name, approach, 1outof5, 3outof5, 5outof5
-task1, approach1, mean1_1_1 (std1_1_1), mean1_1_3 (std1_1_3), mean1_1_5 (std1_1_5)
-task1, approach2, mean1_2_1 (std1_2_1), mean1_2_3 (std1_2_3), mean1_2_5 (std1_2_5)
-task2, approach1, mean2_1_1 (std2_1_1), mean2_1_3 (std2_1_3), mean2_1_5 (std2_1_5)
-task2, approach2, mean2_2_1 (std2_2_1), mean2_2_3 (std2_2_3), mean2_2_5 (std2_2_5)
-...
-total, approach1, mean_total_1 (std_total_1), mean_total_3 (std_total_3), mean_total_5 (std_total_5)
-total, approach2, mean_total_1 (std_total_1), mean_total_3 (std_total_3), mean_total_5 (std_total_5)
 """
-# Aggregate results into result table based on the structure above
-for task_name, result_dict in results.items():
-    for approach in approaches:
-        curr_task_approach_result = {"Task": task_name, "Approach": approach}
-        for mismatch_level, approach_dict in result_dict.items():
-            if approach_dict[approach]:
-                flatten_values = [value for values in approach_dict[approach] for value in values]
-                
-                mean_val, se_val = mean_and_se(flatten_values)
-            else:
-                mean_val, se_val = -1, -1
-            
-            curr_task_approach_result[mismatch_level] = f"{mean_val:.2f} ({se_val:.2f})"
+For each task, calculate the average difference between the subsections, and split the path into 3 even groups
+"""
+dict_from_std = {
+    "Low": [],
+    "Medium": [],
+    "High": []
+}
 
-        result_table.append(curr_task_approach_result)
+dict_from_cv = {
+    "Low": [],
+    "Medium": [],
+    "High": []
+}
 
-# For fast, the order should be low=5outof5, medium=1outof5, high=3outof5
-# For slow, the order should be low=5outof5, medium=1outof5, high=3outof5
+dict_from_diff = {
+    "Low": [],
+    "Medium": [],
+    "High": []
+}
 
-if speed_type == 'slow':
-    # ordered_mismatch_levels = ['5outof5', '3outof5', '1outof5']
-    ordered_mismatch_levels = ['3outof5', '1outof5', '1outof5']
-else:
-    ordered_mismatch_levels = ['5outof5', '1outof5', '3outof5']
+
+for tb_task_name in ["Door-open", "Window-open", "Lever-pull"]:
+    task_name = tb_task_name.lower() + "-v2"
+
+    demo_std_list = []
+    demo_cv_list = []
+    demo_diff_list = []
+
+    for level in [1, 3, 5]:
+        for i in range(3):
+            with open(f"/share/portal/wph52/TemporalOT/create_demo/metaworld_demos/{task_name}/random_mismatched_{speed_type}/{level}outof5_mismatched/{level}outof5_mismatched_{i}/{task_name}_corner3_0_mismatched_info.json") as f:
+                info = json.load(f)
+                subsection_lens = [len(info[subsection]["subsampled_indices"]) for subsection in info.keys()]
+                demo_len = np.sum(subsection_lens)
+                demo_std = np.std(subsection_lens)
+                demo_std_list.append((tb_task_name, level, i, demo_std))
+                demo_cv_list.append((tb_task_name, level, i, demo_std/np.mean(subsection_lens)))
+
+                diff = 0
+                for i in range(len(subsection_lens)-1):
+                    for j in range(i+1, len(subsection_lens)):
+                        diff += abs(subsection_lens[i] - subsection_lens[j])
+                diff = diff / demo_len / 10.0
+                demo_diff_list.append((tb_task_name, level, i, diff))
+
+    # Sort the list based on the 3rd element in each tuple (from smallest to largest)
+    demo_std_list.sort(key=lambda x: x[3])
+    demo_cv_list.sort(key=lambda x: x[3])
+    demo_diff_list.sort(key=lambda x: x[3])
+    
+    # Split the list into 3 even groups
+    for i, result_lvl in enumerate(["Low", "Medium", "High"]):
+        dict_from_std[result_lvl].extend(demo_std_list[i*3:(i+1)*3])
+        dict_from_cv[result_lvl].extend(demo_cv_list[i*3:(i+1)*3])
+        dict_from_diff[result_lvl].extend(demo_std_list[i*3:(i+1)*3])
 
 means_plot = {approach: [] for approach in approaches}
 ses_plot = {approach: [] for approach in approaches}
 
+if args.metric == 'std':
+    dict_to_use = dict_from_std
+elif args.metric == 'cv':
+    dict_to_use = dict_from_cv
+else:
+    dict_to_use = dict_from_diff
+
+if speed_type == 'slow':
+    order_for_result_lvl = ['High', 'Medium', 'Low']
+else:
+    order_for_result_lvl = ['Low', 'Medium', 'High']
+
 for approach in approaches:
-    total_task_results = {"Task": "Total", "Approach": approach}
+    for result_lvl in order_for_result_lvl:
+        all_values = []
+        for task_name, level, i, _ in dict_to_use[result_lvl]:
+            all_values.extend(results[task_name][f"{level}outof5"][str(i)][approach])
 
-    for mismatch_level in ordered_mismatch_levels:
-        all_values = [value for task_values in results.values() for value in task_values[mismatch_level][approach]]
+        all_values = np.array(all_values).flatten()
 
-        flatten_all_values = np.concatenate(all_values)
-
-        if all_values:
-            mean_val, se_val = mean_and_se(flatten_all_values)
+        if len(all_values) > 0:
+            mean_val, se_val = mean_and_se(all_values)
         else:
             mean_val, se_val = -1, -1
 
         means_plot[approach].append(mean_val)
         ses_plot[approach].append(se_val)
 
-        total_task_results[mismatch_level] = f"{mean_val:.2f} ({se_val:.2f})"
-
-    result_table.append(total_task_results)
-
-# Convert aggregated results to a DataFrame
-aggregated_df = pd.DataFrame(result_table)
-
-# Save the aggregated results to a new CSV
-output_csv = os.path.join("eval/eval_agg_results", f"metaworld_random_{speed_type}_mismatched_agg_result.csv")
-aggregated_df.to_csv(output_csv, index=False)
-
-print(f"Aggregated results saved to {output_csv}")
 
 """##################################################################################
 
@@ -154,8 +175,8 @@ print(f"Aggregated results saved to {output_csv}")
 
 from .eval_constants import APPROACH_COLOR_DICT, APPROACH_NAME_TO_PLOT
 
-x = np.arange(len(ordered_mismatch_levels))  # the label locations
-width = 0.35/2  # the width of the bars
+x = np.arange(3)  # the label locations
+width = 0.35  # the width of the bars
 
 plt.grid(True, linestyle='--', alpha=0.3, zorder=0)
 
@@ -170,7 +191,7 @@ for i, approach in enumerate(approaches):
         plt.text(j + (i - 1) * width, mean_val + 0.5, f"{mean_val:.2f}", ha='center', va='bottom', fontsize=16)
 
 # Adding labels, title, and legend
-plt.xlabel(f'Mismatch Level ({"Sped Up" if speed_type == "fast" else "Slowed Down"})', fontsize=20)
+plt.xlabel(f'Misaligned Level ({"Sped Up" if speed_type == "fast" else "Slowed Down"})', fontsize=20)
 plt.ylabel('Cumulative Return', fontsize=20)
 # ax.set_title('Total Results for Approaches with Mismatch Levels')
 
@@ -179,15 +200,15 @@ if speed_type == 'slow':
     # reverse the order
     ordered_xticks = ordered_xticks[::-1]
 plt.xticks(x, ordered_xticks, fontsize=16)
-plt.ylim([0, 19])
+plt.ylim([0, 20])
 
-plt.legend(fontsize=16)
+plt.legend(fontsize=16, loc='upper right', ncol=2)
 
 # Display the plot
 plt.tight_layout()
 
 # Save the plot
-output_plot = os.path.join("eval/eval_agg_results", f"metaworld_random_{speed_type}_mismatched_agg_result.png")
+output_plot = os.path.join("eval/eval_agg_results", f"metaworld_reclustered={args.metric}_random_{speed_type}_mismatched_result.png")
 plt.savefig(output_plot, dpi=300, bbox_inches='tight')
 plt.close()
 

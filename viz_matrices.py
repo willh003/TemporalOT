@@ -97,7 +97,7 @@ def plot_heatmap(matrix, title, cmap):
     plt.ylabel("Learner Trajectory")
 
     # Save the plot to a BytesIO buffer
-    plt.savefig(f"main_fig_plots/{title}.png", format="png")
+    plt.savefig(f"main_fig/{title}.png", format="png")
     plt.close()
 
 plot_heatmap(info['cost_matrix'], "cost_matrix", "gray_r")

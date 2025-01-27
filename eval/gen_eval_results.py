@@ -12,7 +12,7 @@ import pandas as pd
 import os
 import numpy as np
 import argparse
-from utils.math_utils import interquartile_mean_and_se
+from utils.math_utils import interquartile_mean_and_se, mean_and_se
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
@@ -27,9 +27,13 @@ if __name__ == "__main__":
 
     # Columns for approaches
     # approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA"]
-    approaches = ["Threshold", "DTW", "OT", "TemporalOT", "ORCA"]
     if args.exp == "matched":
-        approaches.append("ORCA+TOT pretrained (500k-500k)")
+        approaches = ["Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    else:
+        approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    # if args.exp == "matched":
+    #     approaches.append("ORCA+TOT pretrained (500k-500k)")
 
     # Initialize a dictionary to store results
     results = {}
@@ -125,8 +129,6 @@ if __name__ == "__main__":
 
     from .eval_constants import APPROACH_COLOR_DICT, APPROACH_NAME_TO_PLOT
 
-    approaches_no_roboclip = [approach for approach in approaches if approach != "RoboCLIP"]
-
     # from demo.constants import MAX_PATH_LENGTH
 
     # # For each task, normalize the cumulative return by the maximum path length
@@ -136,32 +138,36 @@ if __name__ == "__main__":
     #             max_path_length = MAX_PATH_LENGTH[task_key[1].lower() + "-v2"]
     #             results[task_key][approach] = [value / max_path_length for value in values]
 
-    for approach in approaches_no_roboclip:
+    for approach in approaches:
         all_values = [value for task_values in results.values() for value in task_values[approach]]
 
         if all_values:
             flatten_values = np.concatenate(all_values)
             
             # Calculate the interquartile mean (IQM)
-            iqm, sem = interquartile_mean_and_se(flatten_values)
+            # iqm, sem = interquartile_mean_and_se(flatten_values)
+            mean, se = mean_and_se(flatten_values)
         else:
-            iqm, sem = 0, 0
+            # iqm, sem = 0, 0
+            mean, se = 0, 0
 
         approach_name = APPROACH_NAME_TO_PLOT[approach]
 
         # Plot the bar (with label's font size at 18)
-        plt.bar(approach_name, iqm, yerr=sem, color=APPROACH_COLOR_DICT[approach], zorder=3, capsize=10)
+        plt.bar(approach_name, mean, yerr=se, color=APPROACH_COLOR_DICT[approach], zorder=3, capsize=10)
 
         # Add the IQM value above the bar
-        plt.text(approach_name, iqm + 0.005, f"{iqm:.2f}", ha='center', va='bottom', fontsize=16)
+        plt.text(approach_name, mean + 0.005, f"{mean:.2f}", ha='center', va='bottom', fontsize=16)
 
     plt.xticks(fontsize=16)
-    plt.ylabel('IQM Cumulative Return', fontsize=20)
+    plt.ylim([0, 17])
+
+    plt.ylabel('Mean Cumulative Return', fontsize=20)
 
     plt.tight_layout()
 
     # Save plot
-    plt.savefig(os.path.join(f"eval/eval_agg_results/{args.domain}_{args.exp}_iqm.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(f"eval/eval_agg_results/{args.domain}_{args.exp}_mean.png"), dpi=300, bbox_inches='tight')
     plt.close()
 
 
