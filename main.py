@@ -366,7 +366,7 @@ def run_wandb(cfg):
         tags.append("matched")
 
     with wandb.init(
-        project="temporal_ot",
+        project="orca",
         name=run_name,
         tags=tags,
         sync_tensorboard=True,

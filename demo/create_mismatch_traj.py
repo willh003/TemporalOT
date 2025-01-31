@@ -105,15 +105,6 @@ def mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indic
 
     save_frames_and_states(subsampled_frames, subsampled_gif_path, subsampled_states, subsampled_states_path)
 
-# sparse frame indices (5 each)
-sparse_frame_indices = {
-    "window-open-v2": [5, 7, 21, 25, 27, 31, 38, 56],
-    "button-press-v2": [6, 14, 22, 24, 26, 32, 38, 56],
-    "door-close-v2": [6, 13, 15, 21, 22, 30, 36, 48],
-    "door-open-v2": [6, 10, 16, 20, 22, 24, 31, 62],
-    "stick-push-v2": [10, 12, 14, 16, 18, 20, 30, 50],
-    "door-lock-v2": [6, 12, 20, 24, 26, 28, 30, 32]
-}
 
 medium_frame_indices = {
     "window-open-v2": list(range(5)) + list(range(26, 38)) + [49, 50, 51], 

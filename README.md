@@ -11,6 +11,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 pip install -r requirements.txt
 cd Metaworld
 pip install -e .
+pip install 'numpy<2'
 ```
 
 ## Run Experiments
