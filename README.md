@@ -1,4 +1,4 @@
-# Cover Your Bases
+# ORCA: ORdered Coverage Alignment
 
 ## Environment Setup
 
