@@ -3,9 +3,9 @@ Adapted from https://github.com/fuyw/TemporalOT/blob/main/collect_expert_traj.py
 
 Usage:
 - If you just want to use the default camera (assuming that it's in the dictionary), you can run:
-    python create_demo/collect_expert_traj.py -e hammer-v2 -c d
+    python demo/collect_expert_traj.py -e hammer-v2 -c d
 - If you want to use a specific camera, you can run:
-    python create_demo/collect_expert_traj.py -e hammer-v2 -c corner3
+    python demo/collect_expert_traj.py -e hammer-v2 -c corner3
 
     The options are: corner, corner2, corner3, corner4
 
@@ -197,8 +197,8 @@ def collect_trajectories(env_name, num_demos, camera_name, skip_frames=0):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env_name", type=str, default="hammer-v2")
-    parser.add_argument("-n", "--num_demos", type=int, default=2)
+    parser.add_argument("-e", "--env_name", type=str, default="door-close-v2")
+    parser.add_argument("-n", "--num_demos", type=int, default=1)
     parser.add_argument("-c", "--camera_name", type=str, default="d", choices=["d", "corner", "corner2", "corner3", "corner4"])
     parser.add_argument("-s", "--skip_frames", type=int, default=1, help="Number of frames to skip (0 means not skipping any frame; 1 means getting every other frame)")
     args = parser.parse_args()

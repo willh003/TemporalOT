@@ -12,12 +12,12 @@ import json
 from dm_env import specs
 from tqdm import tqdm
 
-from models import ResNet, DDPGAgent, TEMPORAL_OT_CHECKPOINTS
+from models import ResNet, DDPGAgent
 from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
                    make_replay_loader, make_expert_replay_loader,
                    record_demo, ReplayBufferStorage, load_gif_frames, get_output_folder_name, get_output_path, plot_training_performance, plot_train_heatmap, AdaptiveDiscount)
 
-from seq_matching import load_matching_fn, AutomaticDiscountScheduling
+from seq_matching import load_matching_fn
 
 from demo import CAMERA, get_demo_gif_path
 from utils.cluster_utils import set_os_vars
@@ -120,7 +120,6 @@ def run(cfg, wandb_run=None):
         "ent_reg": cfg.ent_reg,
         "mask_k": cfg.mask_k,
         "sdtw_smoothing": cfg.sdtw_smoothing,
-        "track_progress": cfg.track_progress,
         "threshold": cfg.threshold
     }
     
@@ -145,55 +144,15 @@ def run(cfg, wandb_run=None):
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
     if cfg.use_ckpt:
-        if cfg.mismatched and not cfg.random_mismatched:
-            exp_type = "mismatched"
-            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
-        elif not cfg.mismatched and not cfg.random_mismatched:
-            exp_type = "matched"
-            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
-        elif cfg.random_mismatched:
-            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_random_{cfg.speed_type}.json"
-        else:
-            raise Exception("Random mismatched not supported for pretrained models")
-        
-        with open(checkpoint_json_path, 'r') as f:
-            temporalot_checkpoint_path = json.load(f)
+    
+        # We use the checkpoint from train step 500000
+        ckpt_path = cfg.ckpt_path
+        ckpt_path = os.path.join(ckpt_path)
 
-        assert env_name in temporalot_checkpoint_path, f"Error: no checkpoint for task {env_name}"
-
-        if not cfg.random_mismatched:
-            available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(i)]["path"]) for i in range(1, 4) if temporalot_checkpoint_path[env_name][str(i)]["path"] != "" and temporalot_checkpoint_path[env_name][str(i)]["used"] == "unclaimed"]
-        else:
-            available_checkpoints = [(i, temporalot_checkpoint_path[env_name][str(cfg.mismatched_level)][str(cfg.seed)]["path"]) for i in range(1)]
-
-        if len(available_checkpoints) == 0:
-            raise Exception(f"No available checkpoints for task {env_name}. Check utils/temporalot_checkpoint_path.json")
-
-        import time
-        wait_time = np.random.choice(range(5, 16))
-        print(f"Waiting for {wait_time} seconds to hopefully help with async")
-        time.sleep(wait_time)
-
-        # Choose a random checkpoint
-        ckpt_idx = np.random.choice(range(len(available_checkpoints)))
-        ckpt_run_num, ckpt_path = available_checkpoints[ckpt_idx]
-
-        # Store it asap for batched job
-        if not cfg.random_mismatched:
-            temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "claimed"
-        
-        with open(checkpoint_json_path, 'w') as f:
-            json.dump(temporalot_checkpoint_path, f, indent=4)
-
-        ckpt_path = os.path.join(ckpt_path, "models", "500000.pt")
-
-        print(f"Avaialble checkpoints: {available_checkpoints}\nChoosing checkpoint {ckpt_run_num} at {ckpt_path}")
+        print(f"Loading checkpoint at {ckpt_path}")
 
         snapshot = torch.load(ckpt_path)
 
-        # only load the actor, not the critic (since reward function may change)
-        # del snapshot["critic"] 
-        # del snapshot["critic_opt"]
         agent.load_snapshot(snapshot)
     
     expl_noise = cfg.expl_noise
@@ -215,7 +174,7 @@ def run(cfg, wandb_run=None):
         print(f"Loading demo from {demo_path}")
 
         if not os.path.exists(demo_path):
-            raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")
+            raise Exception(f"No expert for {env_name}_{camera_name}_{i} with mismatched={cfg.mismatched}, random_mismatched={cfg.random_mismatched}, and speed type {cfg.speed_type}. You need to create the expert trajectories first")
 
         data = load_gif_frames(demo_path, "torch")
         expert_pixel.append(data)
@@ -228,10 +187,6 @@ def run(cfg, wandb_run=None):
 
     agent.init_demos(cost_encoder, demos)
     logger.info(f"len(demo) = {len(demos)}, demos[0].shape = {demos[0].shape}")
-
-    if cfg.ads:
-        ads = AutomaticDiscountScheduling(horizon=env_horizon, alpha=.2, threshold=.9, progress_start=.2, max_progress_delta=5, ref_score_percentile=50, agent_score_percentile=90, device='cuda')
-        ads.init_demos(demos)
 
     # start training
     global_episode, episode_step, episode_reward = 0, 0, 0
@@ -256,15 +211,6 @@ def run(cfg, wandb_run=None):
             rewards, info = agent.rewarder(pixels)
             assignment = info["assignment"]
             cost_matrix = info["cost_matrix"]
-            if cfg.track_progress:
-                new_discount = .2 ** (1/info["progress"])                
-                discount.set_discount(new_discount)
-                
-                progress = info["progress"]
-                # print(f"progress: {progress}, new_discount: {discount()}")
-
-                if wandb_run is not None:
-                    wandb_run.log({"train/progress":progress}, commit=False)
 
             cost_min = cost_matrix.min()
             cost_max = cost_matrix.max()
@@ -297,9 +243,6 @@ def run(cfg, wandb_run=None):
                 rewards, info = agent.rewarder(pixels)
                 assignment = info["assignment"]
                 cost_matrix = info["cost_matrix"]
-                if cfg.track_progress:
-                    new_discount = .2 ** (1/info["progress"])
-                    discount.set_discount(new_discount)
                         
                 cost_min = cost_matrix.min()
                 cost_max = cost_matrix.max()
@@ -385,17 +328,6 @@ def run(cfg, wandb_run=None):
 
             res.append((t, discount(), expl_noise, *(v for v in eval_metrics.values())))
 
-            if cfg.ads:
-                eval_cost_matrices = []
-                for pixel_obs in final_pixels:
-                    _, info = agent.rewarder(pixel_obs)
-                    eval_cost_matrices.append(info["cost_matrix"])
-                
-                ads_discount, info = ads.update(eval_cost_matrices)
-                metrics["tracking/progress"] = info["progress"]
-                metrics["tracking/ads_discount"] = ads_discount
-                metrics["tracking/match_score"] = float(info["match_score"])
-
             if wandb_run is not None:        
                 wandb_run.log(metrics)
             else:
@@ -418,17 +350,6 @@ def run(cfg, wandb_run=None):
 
     # delete buffer
     os.system(f"rm -rf {buffer_dir}")
-
-    # set a run as used if we are using the checkpoint
-    if cfg.use_ckpt:
-        with open(checkpoint_json_path, 'r') as f:
-            temporalot_checkpoint_path = json.load(f)
-
-        if not cfg.random_mismatched:
-            temporalot_checkpoint_path[env_name][str(ckpt_run_num)]["used"] = "completed"
-        
-        with open(checkpoint_json_path, 'w') as f:
-            json.dump(temporalot_checkpoint_path, f, indent=4)
 
 
 def run_wandb(cfg):
@@ -466,7 +387,10 @@ def main(cfg: DictConfig):
         run_wandb(cfg)
 
 if __name__=="__main__":
+    
+    # If running on a cluster, it may be necessary to uncomment this line to ensure rendering is set up
     set_os_vars()
+    
     GlobalHydra.instance().clear()
 
     # Generate short uuid to ensure no collisions on run paths

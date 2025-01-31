@@ -1,5 +1,7 @@
 import os
 
+BASE_DEMO_DIR = 'create_demo'
+
 def get_demo_gif_path(env_name, task_name, camera_name, demo_num, num_frames='d', mismatched=False, random_mismatched_info={}):
     """
     Parameters:
@@ -42,9 +44,6 @@ def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=Fa
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/default")
     else:
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/frames_{num_frames}")
-
-
-BASE_DEMO_DIR = '/share/portal/wph52/TemporalOT/create_demo'
 
 CAMERA = {
     'button-press-v2': 'corner',

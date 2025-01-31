@@ -2,6 +2,7 @@ import os
 import numpy as np
 from PIL import Image
 from .constants import get_demo_dir, get_demo_gif_path
+import argparse
 
 def load_frames_and_states(input_gif_path, input_states_path=None):
 
@@ -128,17 +129,9 @@ medium_frame_indices = {
 }
 
 if __name__=="__main__":
-
     env_name = "metaworld"
-    task_name = "door-close-v2"
     camera_name = "d"
     mismatched = True
-
-    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
-    # new gif path
-    output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
-    #mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=medium_frame_indices[task_name])
-
 
     for task_name in medium_frame_indices.keys():
         # default gif path for demos
@@ -148,17 +141,9 @@ if __name__=="__main__":
 
         if os.path.exists(input_gif_path):
             mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=medium_frame_indices[task_name])
+            print(f"Successfully created mistmatched demo for {task_name}")
         else:
             print(f"{task_name} does not exist")
             
-    #last_frame = 80
-    #num_frames = 120
-    #output_dir = get_demo_dir(env_name, task_name, camera_name, num_frames=num_frames, mismatched=False) # new gif path
-    #evenly_subsample_gif_and_states(input_gif_path, output_dir, num_frames, last_frame=last_frame)
-
-    ###### For subsampling after N consecutive successes
-    # evenly_subsample_gif_and_states(input_gif_path, output_dir, N=15, last_frame=None, cut_after_N_consecutive_success=5)
-
-
 
 

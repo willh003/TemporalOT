@@ -3,13 +3,14 @@ Usage (at the top directory): python -m demo.create_random_mismatch_traj
 """
 
 import os
+import argparse
 import numpy as np
 import json
 import copy
 from PIL import Image
 
 from .constants import get_demo_dir, get_demo_gif_path
-from .subsample_gifs_and_states import load_frames_and_states, save_frames_and_states
+
 """
 File structure to store the randomly generated mismatch
 
@@ -32,6 +33,44 @@ MISMATCH_SPEED_LEVELS = {
     "slow": [-1, -2, -3, -4, -5],  # Number of duplicates
     "mixed": []
 }
+
+def load_frames_and_states(input_gif_path, input_states_path=None):
+
+    if input_states_path is None: # infer from gif path
+        input_states_path =  os.path.splitext(input_gif_path)[0] + "_states.npy"
+
+    assert input_gif_path.endswith(".gif"), "error: reference seq not a gif"
+    
+    # Load GIF and states
+    gif = Image.open(input_gif_path)
+    states = np.load(input_states_path)
+
+    # Verify that the number of frames matches the states
+    frames = []
+    try:
+        while True:
+            frames.append(gif.copy())
+            gif.seek(gif.tell() + 1)
+    except EOFError:
+        pass  # End of GIF frames
+
+    return frames, states
+
+def save_frames_and_states(frames, gif_path, states, states_path, use_pil=True):
+    if use_pil:
+        frames[0].save(
+            gif_path,
+            save_all=True,
+            append_images=frames[1:],
+            loop=0
+        )
+    else:
+        import imageio
+
+        imageio.mimsave(gif_path, frames, duration=0.1, loop=0, plugin="pillow", optimize=False, disposal=2)  # duration is in seconds
+
+    np.save(states_path, states)
+
 
 def random_subsample_gif_and_states(input_gif_path, output_dir, speed_type, mismatch_level, num_of_sections, pct_of_success_needed=0.1):
     # Ensure output directory exists
@@ -177,10 +216,15 @@ def create_random_mismatch_trajs(input_gif_path, speed_type, mismatch_level, num
             print(f"{input_gif_path} does not exist")
 
 if __name__ == "__main__":
-    env_name = "metaworld"
-    task_name = "lever-pull-v2"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--env_name", type=str, default="door-close-v2")
+    parser.add_argument("-s", "--speed", type=str, default="fast", help="speed of trajectory")
+    args = parser.parse_args()
+
+    task_name = args.env_name # weird thing, we overloaded "env_name"
+    speed_type = args.speed  # options: 'fast', 'slow', 'mixed'
     camera_name = "d"
-    speed_type = 'slow'  # options: 'fast', 'slow', 'mixed'
+    env_name = "metaworld"
     mismatch_level = [1, 3, 5]
     num_of_sections = 5 # How many subsection to partition the demo into
     num_traj = 3

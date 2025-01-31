@@ -36,14 +36,4 @@ def load_matching_fn(fn_name, fn_config):
     else:
         raise Exception(f"Invalid fn {fn_name}")
     
-    if fn_config.get('track_progress', False):
-
-        def tracking_fn(cost_matrix, lookahead=10):
-            final_reward, info = fn(cost_matrix)
-            progress = dtw_progress_tracker(cost_matrix) + 1
-            info["progress"] = progress
-            return final_reward, info
-        
-        return tracking_fn
-
     return fn

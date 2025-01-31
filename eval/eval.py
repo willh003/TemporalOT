@@ -22,7 +22,6 @@ import scipy.stats as stats
 from torchvision.utils import save_image
 import argparse
 import pandas as pd
-from .experiments import *
 from utils.math_utils import interquartile_mean_and_ci
 
 def extract_timestep(filename: str) -> int:
@@ -164,6 +163,14 @@ def compute_performance_many_experiments(rollout_directories, performance_col):
     
     return all_rollout_performances
 
+FULL_EXPERIMENTS = {
+    "button-press-v2": {
+        "Coverage": [], # put runs here
+        "TemporalOT": []
+    }
+}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--task", default="button-press-v2", help="Specify which task to run experiment for")    
@@ -172,7 +179,7 @@ if __name__ == "__main__":
     task = args.task
     plot_folder = "icml_figs"
     plot_smoothing = 5
-    base_exp_dir = "/share/portal/wph52/TemporalOT/train_logs"
+    base_exp_dir = "train_logs/"
     performance_col = "eval/total_success_rate"
     
     if not os.path.exists(plot_folder):
