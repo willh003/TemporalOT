@@ -44,7 +44,7 @@ def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=Fa
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/frames_{num_frames}")
 
 
-BASE_DEMO_DIR = '/share/portal/wph52/TemporalOT/create_demo'
+BASE_DEMO_DIR = '/share/portal/hw575/TemporalOT/create_demo'
 
 CAMERA = {
     'button-press-v2': 'corner',

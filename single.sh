@@ -5,32 +5,33 @@ TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2
 REWARD_FN="coverage" 
 SEED=319
 
-USE_CKPT=true
+USE_CKPT=false
 
 NUM_DEMOS=1
 MISMATCHED=false
 NUM_FRAMES="d" # d for default
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos
-RANDOM_MISMATCHED=true 
+RANDOM_MISMATCHED=false 
 NUM_SECS=5  # Only used if RANDOM_MISMATCHED=true
 MISMATCHED_LEVEL=1  # Only used if RANDOM_MISMATCHED=true
 SPEED_TYPE='slow' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
 RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 
+OBS_TYPE='pixels' # pixels for image based, features for ground truth state based=
 DISCOUNT_FACTOR=0.9
 MASK_K=2
 TAU=1
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 
-INCLUDE_TIMESTEP=true
+INCLUDE_TIMESTEP=false
 TRACK_PROGRESS=false
 ADS=false
 
 TRAIN_STEPS=500000
 
 # Logging Parameters
-WANDB_MODE="online"
+WANDB_MODE="disabled"
 VIDEO_PERIOD=1200 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
@@ -48,7 +49,7 @@ python main.py \
     mismatched_level=${MISMATCHED_LEVEL} \
     speed_type=${SPEED_TYPE} \
     random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
-    obs_type="features" \
+    obs_type=${OBS_TYPE} \
     seed=${SEED} \
     discount_factor=${DISCOUNT_FACTOR} \
     num_demos=${NUM_DEMOS} \

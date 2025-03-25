@@ -9,9 +9,9 @@ TIME="8:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
-TASK_NAME=("door-open-v2") 
+TASK_NAME=("door-open-v2" "window-open-v2" "lever-pull-v2") 
 REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
-SEED=(213 213) # "r" indicates a random seed
+SEED=(213 195 44) # "r" indicates a random seed
 
 USE_CKPT=false
 
@@ -20,18 +20,19 @@ MISMATCHED=false
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos
-RANDOM_MISMATCHED=true 
+RANDOM_MISMATCHED=false 
 NUM_SECS=5  # Only used if RANDOM_MISMATCHED=true
 MISMATCHED_LEVEL=3 # Only used if RANDOM_MISMATCHED=true
 SPEED_TYPE='fast' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
 RANDOM_MISMATCHED_RUN_NUM=2 # Only used if RANDOM_MISMATCHED=true
 
+OBS_TYPE='pixels' # pixels for image based, features for ground truth state based=
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=2
 TAU=1
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 
-INCLUDE_TIMESTEP=true
+INCLUDE_TIMESTEP=false 
 TRACK_PROGRESS=false
 ADS=false
 
@@ -78,7 +79,7 @@ python main.py \
     mismatched_level=${MISMATCHED_LEVEL} \
     speed_type=${SPEED_TYPE} \
     random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
-    obs_type="features" \
+    obs_type=${OBS_TYPE} \
     num_demos=${NUM_DEMOS} \
     camera_name=${CAMERA_NAME} \
     mask_k=${MASK_K} \
