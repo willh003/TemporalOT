@@ -14,6 +14,8 @@ import numpy as np
 import argparse
 from utils.math_utils import interquartile_mean_and_se, mean_and_se
 import matplotlib.pyplot as plt
+from .eval_constants import get_demo_gif_path
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -31,7 +33,7 @@ if __name__ == "__main__":
         approaches = ["Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
     else:
         approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
-    approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    approaches = ["RoboCLIP", "Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
     # if args.exp == "matched":
     #     approaches.append("ORCA+TOT pretrained (500k-500k)")
 
@@ -41,6 +43,12 @@ if __name__ == "__main__":
     # Iterate through each task and approach
     for index, row in df.iterrows():
         task_key = (row['Difficulty Level'], row['Tasks'])
+
+        # Load the return from the orginal demonstration
+        og_demo_path = get_demo_gif_path("metaworld", row['Tasks'].lower() + "-v2", "d", demo_num=0, mismatched=False)
+        # Load the success vector
+        success = np.load(os.path.splitext(og_demo_path)[0] + "_success.npy")
+        expert_return = np.sum(success)
 
         # Initialize storage for the task if not already present
         if task_key not in results:
@@ -57,7 +65,7 @@ if __name__ == "__main__":
 
                 try:
                     with open(final_eval_path, 'rb') as file:
-                        return_values = np.load(file)
+                        return_values = np.load(file)/expert_return  # Normalize by the expert return
                         results[task_key][approach].append(return_values)
                 except Exception as e:
                     print(f"Error reading {final_eval_path}: {e}")
@@ -125,6 +133,7 @@ if __name__ == "__main__":
 
     # Plotting (the IQM for all the approaches)
     # Set the grid to be under the bars
+    plt.figure(figsize=(10, 5))
     plt.grid(True, linestyle='--', alpha=0.3, zorder=0)
 
     from .eval_constants import APPROACH_COLOR_DICT, APPROACH_NAME_TO_PLOT
@@ -157,12 +166,13 @@ if __name__ == "__main__":
         plt.bar(approach_name, mean, yerr=se, color=APPROACH_COLOR_DICT[approach], zorder=3, capsize=10)
 
         # Add the IQM value above the bar
-        plt.text(approach_name, mean + 0.005, f"{mean:.2f}", ha='center', va='bottom', fontsize=16)
+        plt.text(approach_name, mean + 0.05, f" {mean:.2f}", ha='center', va='bottom', fontsize=18)
 
     plt.xticks(fontsize=16)
-    plt.ylim([0, 17])
+    plt.ylim([0, 0.7])
+    plt.yticks(fontsize=16)
 
-    plt.ylabel('Mean Cumulative Return', fontsize=20)
+    plt.ylabel('Normalized Returns', fontsize=20)
 
     plt.tight_layout()
 

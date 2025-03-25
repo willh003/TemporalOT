@@ -130,15 +130,14 @@ medium_frame_indices = {
 if __name__=="__main__":
 
     env_name = "metaworld"
-    task_name = "door-close-v2"
     camera_name = "d"
     mismatched = True
 
-    input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
-    # new gif path
-    output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
+    # task_name = "door-close-v2"
+    # input_gif_path = get_demo_gif_path(env_name, task_name, camera_name, demo_num=0, num_frames="d") 
+    # # new gif path
+    # output_dir = get_demo_dir(env_name, task_name, camera_name, mismatched=mismatched) 
     #mismatched_subsample_gifs_and_states(input_gif_path, output_dir, frame_indices=medium_frame_indices[task_name])
-
 
     for task_name in medium_frame_indices.keys():
         # default gif path for demos

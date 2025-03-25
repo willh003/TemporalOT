@@ -8,30 +8,57 @@ def bordered_identity_like(N, M, k):
     """
     k = int(k)
 
-    # Base number of 1s per column
-    base_ones = N // M
-    # Remainder to distribute among the first (N % M) columns
-    remainder = N % M
+    if M <= N:
+        # Base number of 1s per column
+        base_ones = N // M
+        # Remainder to distribute among the first (N % M) columns
+        remainder = N % M
 
-    # Initialize an (N, M) zero matrix
-    matrix = np.zeros((N, M), dtype=np.float32)
+        # Initialize an (N, M) zero matrix
+        matrix = np.zeros((N, M), dtype=np.float32)
 
-    # Fill each column with `base_ones` 1s, plus 1 additional 1 for the first `remainder` columns
-    current_row = 0
-    for col in range(M):
-        num_ones = base_ones + 1 if M - col - 1 < remainder else base_ones
-        matrix[current_row:current_row + num_ones, col] = 1
-        current_row += num_ones  # Move to the next starting row
-
-    # Create the border by adding k ones to the left and right of each row's 1s
-    bordered_matrix = np.zeros_like(matrix)
-
-    for row in range(N):
+        # Fill each column with `base_ones` 1s, plus 1 additional 1 for the first `remainder` columns
+        current_row = 0
         for col in range(M):
-            if matrix[row, col] == 1:
-                start_col  = max(0, col - k)
-                end_col = min(N, col + k + 1)
-                bordered_matrix[row, start_col:end_col] = 1
+            num_ones = base_ones + 1 if M - col - 1 < remainder else base_ones
+            matrix[current_row:current_row + num_ones, col] = 1
+            current_row += num_ones  # Move to the next starting row
+
+        # Create the border by adding k ones to the left and right of each row's 1s
+        bordered_matrix = np.zeros_like(matrix)
+
+        for row in range(N):
+            for col in range(M):
+                if matrix[row, col] == 1:
+                    start_col  = max(0, col - k)
+                    end_col = min(N, col + k + 1)
+                    bordered_matrix[row, start_col:end_col] = 1
+    else:
+        # Base number of 1s per row
+        base_ones = M // N
+        # Remainder to distribute among the first (M % N) rows
+        remainder = M % N
+
+        # Initialize an (N, M) zero matrix
+        matrix = np.zeros((N, M), dtype=np.float32)
+
+        # Fill each row with `base_ones` 1s, plus 1 additional 1 for the first `remainder` rows
+        #   This help make sure that the 1s reach the end of the matrix
+        current_col = 0
+        for row in range(N):
+            num_ones = base_ones + 1 if N - row - 1 < remainder else base_ones
+            matrix[row, current_col:current_col + num_ones] = 1
+            current_col += num_ones
+
+        # Create the border by adding k ones to the left and right of each row's 1s
+        bordered_matrix = np.zeros_like(matrix)
+
+        for row in range(N):
+            for col in range(M):
+                if matrix[row, col] == 1:
+                    start_col = max(0, col - k)
+                    end_col = min(M, col + k + 1)
+                    bordered_matrix[row, start_col:end_col] = 1
 
     return bordered_matrix
 

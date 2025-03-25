@@ -26,7 +26,8 @@ df = pd.read_csv(csv_file)
 
 # Approaches
 tasks_to_include = ["Door-open", "Window-open", "Lever-pull"]
-approaches = ["TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+# approaches = ["TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+approaches = ["TemporalOT", "ORCA+TOT pretrained (500k-500k)"]
 
 # Initialize a dictionary to store results
 """
@@ -109,10 +110,17 @@ for task_name, result_dict in results.items():
 # For slow, the order should be low=5outof5, medium=1outof5, high=3outof5
 
 if speed_type == 'slow':
+    # original: 5, 3, 1
+    # based on std between subsection: 5, 1, 3 (then reverse it)
+    # based on normalized std between subsection: 5, 3, 1 (then reverse it)
     # ordered_mismatch_levels = ['5outof5', '3outof5', '1outof5']
-    ordered_mismatch_levels = ['3outof5', '1outof5', '1outof5']
+    ordered_mismatch_levels = ['5outof5', '3outof5', '1outof5']
 else:
-    ordered_mismatch_levels = ['5outof5', '1outof5', '3outof5']
+    # original: 1, 3, 5
+    # based on std between subsection: 5, 1, 3
+    # based on normalized std between subsection: 1, 5, 3
+    # ordered_mismatch_levels = ['1outof5', '3outof5', '5outof5']
+    ordered_mismatch_levels = ['1outof5', '3outof5', '5outof5']
 
 means_plot = {approach: [] for approach in approaches}
 ses_plot = {approach: [] for approach in approaches}
@@ -155,8 +163,9 @@ print(f"Aggregated results saved to {output_csv}")
 from .eval_constants import APPROACH_COLOR_DICT, APPROACH_NAME_TO_PLOT
 
 x = np.arange(len(ordered_mismatch_levels))  # the label locations
-width = 0.35/2  # the width of the bars
+width = 0.35  # the width of the bars
 
+plt.figure(figsize=(10, 5))
 plt.grid(True, linestyle='--', alpha=0.3, zorder=0)
 
 # Plotting the bars
@@ -167,10 +176,10 @@ for i, approach in enumerate(approaches):
 # Add the mean values on top of the bars
 for i, approach in enumerate(approaches):
     for j, mean_val in enumerate(means_plot[approach]):
-        plt.text(j + (i - 1) * width, mean_val + 0.5, f"{mean_val:.2f}", ha='center', va='bottom', fontsize=16)
+        plt.text(j + (i - 1) * width, mean_val + 0.5, f"{mean_val:.4g}", ha='center', va='bottom', fontsize=18)
 
 # Adding labels, title, and legend
-plt.xlabel(f'Mismatch Level ({"Sped Up" if speed_type == "fast" else "Slowed Down"})', fontsize=20)
+# plt.xlabel(f'Misaligned Level ({"Sped Up" if speed_type == "fast" else "Slowed Down"})', fontsize=20)
 plt.ylabel('Cumulative Return', fontsize=20)
 # ax.set_title('Total Results for Approaches with Mismatch Levels')
 
@@ -180,8 +189,9 @@ if speed_type == 'slow':
     ordered_xticks = ordered_xticks[::-1]
 plt.xticks(x, ordered_xticks, fontsize=16)
 plt.ylim([0, 19])
+plt.yticks(fontsize=16)
 
-plt.legend(fontsize=16)
+# plt.legend(fontsize=16)
 
 # Display the plot
 plt.tight_layout()

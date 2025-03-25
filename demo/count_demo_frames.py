@@ -35,6 +35,7 @@ for speed in ["fast", "slow"]:
                     info = json.load(f)
                     subsection_lens = [len(info[subsection]["subsampled_indices"]) for subsection in info.keys()]
                     demo_len = np.sum(subsection_lens)
+                    # subsection_lens = [l/np.sum(subsection_lens) for l in subsection_lens]
                     demo_std = np.std(subsection_lens)
                     level_demo_len_list.append(demo_len)
                     level_demo_std_list.append(demo_std)

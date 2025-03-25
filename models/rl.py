@@ -277,6 +277,12 @@ class DDPGAgent:
                 distance_matrix += cosine_distance(obs[i], exp[i])
             distance_matrix /= self.context_num
 
+            # Cover the distance to 0 when the distance is less than 0.05 (Hack to show visualization)
+            # for i in range(distance_matrix.shape[0]):
+            #     for j in range(distance_matrix.shape[1]):
+            #         if distance_matrix[i][j] < 0.035:
+            #             distance_matrix[i][j] = 0
+
             rewards, info = self.reward_fn(distance_matrix.cpu().numpy())
             assignment = info["assignment"]
             rewards = rewards.astype(np.float32)

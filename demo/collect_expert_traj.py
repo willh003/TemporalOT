@@ -212,5 +212,6 @@ if __name__=="__main__":
     else:
         camera_name = CAMERA[env_name]
 
-
-    collect_trajectories(env_name, num_demos, camera_name, skip_frames=args.skip_frames)
+    for task in ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]:
+        env_name = task.lower() + "-v2"
+        collect_trajectories(env_name, num_demos, CAMERA[env_name], skip_frames=args.skip_frames)
