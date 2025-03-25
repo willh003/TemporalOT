@@ -17,7 +17,7 @@ num_workers: 1
 env_name: door-close-v2
 seed: 'r'
 camera_name: d
-obs_type: features
+obs_type: features # features or pixels
 num_frames: d # d for default, number of frames
 mismatched: False
 random_mismatched: False

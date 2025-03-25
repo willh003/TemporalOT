@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Training Parameters
-TASK_NAME="door-close-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
+TASK_NAME="door-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
 REWARD_FN="coverage" 
 SEED="r"
 
@@ -10,7 +10,7 @@ NUM_DEMOS=1
 NUM_FRAMES="d" # d for default
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 MISMATCHED=false # mismatched = true overrides random_mismatched
-RANDOM_MISMATCHED=true 
+RANDOM_MISMATCHED=false 
 
 # Only used if RANDOM_MISMATCHED=true
 NUM_SECS=5  
