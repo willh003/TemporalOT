@@ -8,7 +8,7 @@ camera_name: d
 obs_type: features
 num_frames: d # d for default, number of frames
 mismatched: False
-num_demos: 2
+num_demos: 1 # Have not verified that taking multiple demos works
 context_num: 3
 include_timestep: True
 # Parameters for random mismatched demos
@@ -17,6 +17,9 @@ num_secs: 5  # Only used if RANDOM_MISMATCHED=True
 mismatched_level: 1  # Only used if RANDOM_MISMATCHED=True
 speed_type: slow # Only used if RANDOM_MISMATCHED=True
 random_mismatched_run_num: 0  # Only used if RANDOM_MISMATCHED=True
+# Parameters for multi video ablation
+multi_video_ablation: false
+num_random_speed_videos: 4
 
 reward_fn: coverage
 use_ckpt: false
@@ -32,6 +35,7 @@ ads: false
 discount_factor: .9
 expl_noise: .4
 min_expl_noise: 0.0
+use_max_reward: true
 
 n_eval_episodes: 10
 

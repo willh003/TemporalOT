@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-
+import time
 from utils import (weight_init, to_torch, soft_update_params, cosine_distance,
                    TruncatedNormal, RandomShiftsAug)
 from seq_matching import mask_optimal_transport_plan
@@ -257,7 +257,12 @@ class DDPGAgent:
         self.cost_encoder = cost_encoder
         self.demos = [self.get_context_observations(demo) for demo in demos]
 
-    def rewarder(self, observations):
+    def rewarder(self, observations, use_max=True):
+        """
+        Args:
+            observations: list of observations
+            use_max: if True, use the max reward from the demos. Else, use the mean reward from the demos.
+        """
         scores_list = list()
         rewards_list = list()
         assignment_list = list()
@@ -265,11 +270,15 @@ class DDPGAgent:
         progress_list = list()
         obs = torch.as_tensor(observations).to(self.device)
 
+        start_time = time.time()
         with torch.no_grad():
             obs = self.cost_encoder(obs)
         obs = self.get_context_observations(obs)
+        time_to_encode_obs = time.time() - start_time
 
+        time_to_compute_reward_list = []
         for exp in self.demos:
+            start_time = time.time()
             # context cost matrix
             distance_matrix = 0
 
@@ -295,17 +304,26 @@ class DDPGAgent:
             rewards_list.append(rewards)
             assignment_list.append(assignment)
             cost_matrix_list.append(distance_matrix.cpu().numpy())
-
+            time_to_compute_reward_list.append(time.time() - start_time)
+        
         closest_demo_index = np.argmax(scores_list)
 
         info = {"cost_matrix": cost_matrix_list[closest_demo_index],
-                "assignment": assignment_list[closest_demo_index]}
+                "assignment": assignment_list[closest_demo_index],
+                "scores_list": scores_list,
+                "closest_demo_index": closest_demo_index,
+                "time_to_encode_obs": time_to_encode_obs,
+                "total_time_to_compute_reward": np.sum(time_to_compute_reward_list),
+                "mean_time_to_compute_reward": np.mean(time_to_compute_reward_list)}
 
         # if tracking progress then log it
         if len(progress_list) > 0: 
             info["progress"] = progress_list[closest_demo_index]
 
-        final_rewards = rewards_list[closest_demo_index]
+        if use_max:
+            final_rewards = rewards_list[closest_demo_index]
+        else:
+            final_rewards = np.mean(rewards_list, axis=0)  # (timesteps, )
 
         return final_rewards, info
 

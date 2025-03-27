@@ -1,4 +1,5 @@
 import os
+import json
 
 def get_demo_gif_path(env_name, task_name, camera_name, demo_num, num_frames='d', mismatched=False, random_mismatched_info={}):
     """
@@ -43,8 +44,30 @@ def get_demo_dir(env_name, task_name, camera_name, num_frames='d', mismatched=Fa
     else:
         return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/frames_{num_frames}")
 
+def get_multi_video_ablation_path(env_name, task_name, camera_name, demo_num, total_num_videos):
+    assert env_name == "metaworld"
 
-BASE_DEMO_DIR = '/share/portal/wph52/TemporalOT/create_demo'
+    with open(f"/share/portal/hw575/TemporalOT/create_demo/metaworld_demos/multi_video_n={total_num_videos}_ablation_dict.json", "r") as f:
+        video_dict = json.load(f)
+
+    # Remove the version and capitalize the first letter
+    formatted_task_name = task_name.replace("-v2", "").capitalize()
+
+    video_list_for_task = video_dict[formatted_task_name]
+
+    assert demo_num < len(video_list_for_task)
+
+    # Get the information needed to get the demo
+    speed_type, _, selected_video_info = video_list_for_task[demo_num]
+    _, mismatch_level, i, _= selected_video_info[0]
+    
+    if camera_name=="d":
+        camera_name = CAMERA[task_name]
+
+    return os.path.join(BASE_DEMO_DIR, f"{env_name}_demos/{task_name}/random_mismatched_{speed_type}/{mismatch_level}outof5_mismatched/{mismatch_level}outof5_mismatched_{i}/{task_name}_{camera_name}_0.gif")
+
+
+BASE_DEMO_DIR = '/share/portal/hw575/TemporalOT/create_demo'
 
 CAMERA = {
     'button-press-v2': 'corner',

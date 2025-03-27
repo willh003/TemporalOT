@@ -1,10 +1,17 @@
+"""
+Typical usage:
+- set exp to one of the following: mismatched, matched, random_mismatched_fast, random_mismatched_slow, multi_video
+- run the script
+    python eval/convert_to_checkpoint.py
+"""
+
 import pandas as pd
 import os
 import json
 
-exp = "random_mismatched_fast"
+exp = "multi_diff_video_20"
 
-if exp == "mismatched" or exp == "matched":
+if exp == "mismatched" or exp == "matched" or exp == "multi_video" or exp == "multi_diff_video_4" or exp == "multi_diff_video_10" or exp == "multi_diff_video_20":
     df = pd.read_csv(f"/share/portal/hw575/TemporalOT/eval/eval_path_csv/metaworld_{exp}.csv")
 
     checkpoint_path = {}

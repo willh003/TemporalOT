@@ -4,27 +4,31 @@
 PARTITION="gpu"
 CPUS=2
 GPUS=1
-MEMORY=35GB
-TIME="8:00:00"
+MEMORY=45GB
+TIME="10:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
-TASK_NAME=("door-open-v2") 
-REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
-SEED=(213 213) # "r" indicates a random seed
+TASK_NAME=("door-open-v2" "window-open-v2" "lever-pull-v2") 
+REWARD_FN=("coverage" "temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
+SEED=("r" "r" "r" "r") # "r" indicates a random seed
 
 USE_CKPT=false
+# USE_CKPT=true
 
-NUM_DEMOS=1
-MISMATCHED=false
+NUM_DEMOS=4
+MISMATCHED=true
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos
-RANDOM_MISMATCHED=true 
+RANDOM_MISMATCHED=false 
 NUM_SECS=5  # Only used if RANDOM_MISMATCHED=true
 MISMATCHED_LEVEL=3 # Only used if RANDOM_MISMATCHED=true
-SPEED_TYPE='fast' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
-RANDOM_MISMATCHED_RUN_NUM=2 # Only used if RANDOM_MISMATCHED=true
+SPEED_TYPE='slow' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
+RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
+# Parameters for multi video ablation
+MULTI_VIDEO_ABLATION=false
+NUM_RANDOM_SPEED_VIDEOS=4
 
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=2
@@ -34,8 +38,10 @@ THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress 
 INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
+USE_MAX_REWARD=false  # Default is true
 
-TRAIN_STEPS=1000000
+# TRAIN_STEPS=1000000
+TRAIN_STEPS=500000
 
 # Logging Parameters
 WANDB_MODE="online"
@@ -55,6 +61,7 @@ for task_name_i in "${TASK_NAME[@]}"; do
 #SBATCH --gres=gpu:${GPUS}
 #SBATCH --mem=${MEMORY}
 #SBATCH --time=${TIME}
+#SBATCH --exclude=hariharan-compute-01,hariharan-compute-02,hariharan-compute-03,tripods-compute-01,tripods-compute-02
 #SBATCH --output=dump/train_${task_name_i}_${reward_fn_i}_%j.out
 #SBATCH --error=dump/train_${task_name_i}_${reward_fn_i}_%j.err
 
@@ -71,6 +78,7 @@ python main.py \
     discount_factor=${DISCOUNT_FACTOR} \
     track_progress=${TRACK_PROGRESS} \
     ads=${ADS} \
+    use_max_reward=${USE_MAX_REWARD} \
     mismatched=${MISMATCHED} \
     num_frames=${NUM_FRAMES} \
     random_mismatched=${RANDOM_MISMATCHED} \
@@ -78,6 +86,8 @@ python main.py \
     mismatched_level=${MISMATCHED_LEVEL} \
     speed_type=${SPEED_TYPE} \
     random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
+    multi_video_ablation=${MULTI_VIDEO_ABLATION} \
+    num_random_speed_videos=${NUM_RANDOM_SPEED_VIDEOS} \
     obs_type="features" \
     num_demos=${NUM_DEMOS} \
     camera_name=${CAMERA_NAME} \

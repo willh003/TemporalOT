@@ -19,7 +19,7 @@ from utils import (eval_agent, eval_mode, get_image, get_logger, make_env,
 
 from seq_matching import load_matching_fn, AutomaticDiscountScheduling
 
-from demo import CAMERA, get_demo_gif_path
+from demo import CAMERA, get_demo_gif_path, get_multi_video_ablation_path
 from utils.cluster_utils import set_os_vars
 
 from datetime import datetime
@@ -145,8 +145,14 @@ def run(cfg, wandb_run=None):
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
     if cfg.use_ckpt:
-        if cfg.mismatched and not cfg.random_mismatched:
+        if cfg.mismatched and not cfg.random_mismatched and cfg.num_demos == 1:
             exp_type = "mismatched"
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
+        elif cfg.mismatched and not cfg.random_mismatched and cfg.num_demos > 1:
+            exp_type = f"multi_diff_video_{cfg.num_demos}"
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
+        elif cfg.multi_video_ablation and not cfg.mismatched and not cfg.random_mismatched:
+            exp_type = "multi_video"
             checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
         elif not cfg.mismatched and not cfg.random_mismatched:
             exp_type = "matched"
@@ -155,7 +161,12 @@ def run(cfg, wandb_run=None):
             checkpoint_json_path = f"./utils/temporalot_checkpoint_path_random_{cfg.speed_type}.json"
         else:
             raise Exception("Random mismatched not supported for pretrained models")
-        
+
+        import time
+        wait_time = np.random.choice(range(5, 16))
+        print(f"Waiting for {wait_time} seconds to hopefully help with async")
+        time.sleep(wait_time)
+
         with open(checkpoint_json_path, 'r') as f:
             temporalot_checkpoint_path = json.load(f)
 
@@ -169,11 +180,6 @@ def run(cfg, wandb_run=None):
         if len(available_checkpoints) == 0:
             raise Exception(f"No available checkpoints for task {env_name}. Check utils/temporalot_checkpoint_path.json")
 
-        import time
-        wait_time = np.random.choice(range(5, 16))
-        print(f"Waiting for {wait_time} seconds to hopefully help with async")
-        time.sleep(wait_time)
-
         # Choose a random checkpoint
         ckpt_idx = np.random.choice(range(len(available_checkpoints)))
         ckpt_run_num, ckpt_path = available_checkpoints[ckpt_idx]
@@ -185,6 +191,10 @@ def run(cfg, wandb_run=None):
         with open(checkpoint_json_path, 'w') as f:
             json.dump(temporalot_checkpoint_path, f, indent=4)
 
+        # Save the checkpoint run num and path
+        with open(f"{run_path}/checkpoint_info.json", "w") as f:
+            json.dump({"ckpt_run_num": ckpt_run_num, "ckpt_path": ckpt_path}, f, indent=4)
+     
         ckpt_path = os.path.join(ckpt_path, "models", "500000.pt")
 
         print(f"Avaialble checkpoints: {available_checkpoints}\nChoosing checkpoint {ckpt_run_num} at {ckpt_path}")
@@ -201,30 +211,46 @@ def run(cfg, wandb_run=None):
 
     # expert demo
     expert_pixel = []
-    for i in range(cfg.num_demos):
-        if cfg.random_mismatched:
-            random_mismatched_info = {
-                'mismatch_level': f'{cfg.mismatched_level}outof{cfg.num_secs}_mismatched',
-                'run_num': int(cfg.random_mismatched_run_num),
-                'speed_type': cfg.speed_type
-            }
-        else:
-            random_mismatched_info = {}
+    if not cfg.multi_video_ablation:
+        for i in range(cfg.num_demos):
+            if cfg.random_mismatched:
+                random_mismatched_info = {
+                    'mismatch_level': f'{cfg.mismatched_level}outof{cfg.num_secs}_mismatched',
+                    'run_num': int(cfg.random_mismatched_run_num),
+                    'speed_type': cfg.speed_type
+                }
+            else:
+                random_mismatched_info = {}
 
-        demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched, random_mismatched_info=random_mismatched_info)
-        print(f"Loading demo from {demo_path}")
+            demo_path = get_demo_gif_path("metaworld", env_name, camera_name, i, num_frames=cfg.num_frames, mismatched=cfg.mismatched, random_mismatched_info=random_mismatched_info)
+            print(f"Loading demo {i} from {demo_path}")
 
-        if not os.path.exists(demo_path):
-            raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")
+            if not os.path.exists(demo_path):
+                raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")
 
-        data = load_gif_frames(demo_path, "torch")
-        expert_pixel.append(data)
+            data = load_gif_frames(demo_path, "torch")
+            expert_pixel.append(data)
+    else:
+        for i in range(cfg.num_random_speed_videos):
+            demo_path = get_multi_video_ablation_path("metaworld", env_name, camera_name, i, total_num_videos=cfg.num_random_speed_videos)
+            print(f"[Multi video ablation] Loading demo {i} from {demo_path}")
+
+            if not os.path.exists(demo_path):
+                raise Exception(f"No trajectory for {env_name}_{camera_name}_{i}. You need to create the trajectories first")
+
+            data = load_gif_frames(demo_path, "torch")
+            expert_pixel.append(data)
 
     # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
     cost_encoder = ResNet().to(device)
     _ = cost_encoder.eval()
+    import time
+    start_time = time.time()
     with torch.no_grad():
         demos = [cost_encoder(demo.to(device)) for demo in expert_pixel]
+    time_to_encode_demos = time.time() - start_time
+    if wandb_run is not None:
+        wandb_run.log({"train/time_to_encode_obs": time_to_encode_demos})
 
     agent.init_demos(cost_encoder, demos)
     logger.info(f"len(demo) = {len(demos)}, demos[0].shape = {demos[0].shape}")
@@ -253,7 +279,7 @@ def run(cfg, wandb_run=None):
             global_episode += 1            
             pixels = np.stack(pixels, axis=0)
 
-            rewards, info = agent.rewarder(pixels)
+            rewards, info = agent.rewarder(pixels, use_max=cfg.use_max_reward)
             assignment = info["assignment"]
             cost_matrix = info["cost_matrix"]
             if cfg.track_progress:
@@ -281,6 +307,12 @@ def run(cfg, wandb_run=None):
                     
                     wandb_run.log({"trajectory/cost_matrix": wandb.Image(cost_image, caption="Cost Matrix (Grayscale)")})
                     wandb_run.log({"trajectory/assignment_matrix": wandb.Image(assignment_image, caption="Assignment Matrix (Grayscale)")})
+
+                    wandb_run.log({"trajectory/scores_list": wandb.Histogram(info["scores_list"])})
+                    wandb_run.log({"trajectory/closest_demo_index": info["closest_demo_index"]})
+                    wandb_run.log({"train/time_to_encode_obs": info["time_to_encode_obs"],
+                                   "train/mean_time_to_compute_reward": info["mean_time_to_compute_reward"],
+                                   "train/total_time_to_compute_reward": info["total_time_to_compute_reward"]})
                 else:
                     video_fname = f"{video_dir}/{global_episode}.mp4"
                     imageio.mimsave(video_fname, frames, fps=15)
@@ -294,7 +326,7 @@ def run(cfg, wandb_run=None):
                 rewards_sum = abs(rewards.sum())
                 agent.set_reward_scale(1 / (rewards_sum+1e-5))
                 logger.info(f"agent.sinkhorn_rew_scale = {agent.get_reward_scale():.3f}")
-                rewards, info = agent.rewarder(pixels)
+                rewards, info = agent.rewarder(pixels, use_max=cfg.use_max_reward)
                 assignment = info["assignment"]
                 cost_matrix = info["cost_matrix"]
                 if cfg.track_progress:
@@ -388,7 +420,7 @@ def run(cfg, wandb_run=None):
             if cfg.ads:
                 eval_cost_matrices = []
                 for pixel_obs in final_pixels:
-                    _, info = agent.rewarder(pixel_obs)
+                    _, info = agent.rewarder(pixel_obs, use_max=cfg.use_max_reward)
                     eval_cost_matrices.append(info["cost_matrix"])
                 
                 ads_discount, info = ads.update(eval_cost_matrices)
@@ -436,13 +468,21 @@ def run_wandb(cfg):
     tags = [cfg.env_name, cfg.reward_fn] + (["pretrained"] if cfg.use_ckpt else [])
     if cfg.mismatched:
         tags.append("mismatched")
+
+        if cfg.num_demos > 1:
+            tags.append(f"multi_diff_videos_{cfg.num_demos}")
     elif cfg.random_mismatched:
         if cfg.speed_type == "fast":
             tags.append(f"random_mismatched_{cfg.mismatched_level}outof{cfg.num_secs}")
         else:
             tags.append(f"random_{cfg.speed_type}_mismatched_{cfg.mismatched_level}outof{cfg.num_secs}")
+    elif cfg.multi_video_ablation:
+        tags.append(f"multi_video_{cfg.num_random_speed_videos}")
     else:
         tags.append("matched")
+
+    if not cfg.use_max_reward:
+        tags.append("mean_reward")
 
     with wandb.init(
         project="temporal_ot",
