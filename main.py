@@ -29,6 +29,7 @@ from omegaconf import DictConfig, OmegaConf
 import hydra
 from hydra.core.global_hydra import GlobalHydra
 
+
 def run(cfg, wandb_run=None):
     # random seed
     if cfg.seed == 'r':
@@ -144,6 +145,7 @@ def run(cfg, wandb_run=None):
                         auto_rew_scale_factor=10,
                         context_num=cfg.context_num,
                         use_encoder=use_encoder)
+    
     if cfg.use_ckpt:
         if cfg.mismatched and not cfg.random_mismatched:
             exp_type = "mismatched"
@@ -220,6 +222,19 @@ def run(cfg, wandb_run=None):
         data = load_gif_frames(demo_path, "torch")
         expert_pixel.append(data)
 
+    if cfg.liv_mode != "disabled":
+        from models import LIVRewarder, TASK_DESCRIPTIONS
+
+        if cfg.liv_mode == "text":
+            text_goals = [TASK_DESCRIPTIONS[cfg.env_name]]
+            image_goals = None
+        elif cfg.liv_mode == "image":
+            text_goals = None
+            image_goals = [demo[-1] for demo in expert_pixel] # last frame of each demo as goal
+
+        rewarder = LIVRewarder(text_goals=text_goals, image_goals=image_goals, device=device)
+        agent.rewarder = rewarder
+
     # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
     cost_encoder = ResNet().to(device)
     _ = cost_encoder.eval()
@@ -254,6 +269,7 @@ def run(cfg, wandb_run=None):
             pixels = np.stack(pixels, axis=0)
 
             rewards, info = agent.rewarder(pixels)
+            
             assignment = info["assignment"]
             cost_matrix = info["cost_matrix"]
             if cfg.track_progress:
@@ -266,27 +282,27 @@ def run(cfg, wandb_run=None):
                 if wandb_run is not None:
                     wandb_run.log({"train/progress":progress}, commit=False)
 
-            cost_min = cost_matrix.min()
-            cost_max = cost_matrix.max()
-            assert cost_min >= 0 # sanity check
+            # cost_min = cost_matrix.min()
+            # cost_max = cost_matrix.max()
+            # assert cost_min >= 0 # sanity check
 
             if record_traj:
-                cost_image = plot_train_heatmap(cost_matrix, "Cost")
-                assignment_image = plot_train_heatmap(assignment, "Assignment")
+                # cost_image = plot_train_heatmap(cost_matrix, "Cost")
+                # assignment_image = plot_train_heatmap(assignment, "Assignment")
 
                 if wandb_run is not None:
                     wandb_run.log({"trajectory/video":
                         wandb.Video(np.stack([np.uint8(f).transpose(2, 0, 1) for f in frames]), fps=15)}
                     )
                     
-                    wandb_run.log({"trajectory/cost_matrix": wandb.Image(cost_image, caption="Cost Matrix (Grayscale)")})
-                    wandb_run.log({"trajectory/assignment_matrix": wandb.Image(assignment_image, caption="Assignment Matrix (Grayscale)")})
+                    # wandb_run.log({"trajectory/cost_matrix": wandb.Image(cost_image, caption="Cost Matrix (Grayscale)")})
+                    # wandb_run.log({"trajectory/assignment_matrix": wandb.Image(assignment_image, caption="Assignment Matrix (Grayscale)")})
                 else:
                     video_fname = f"{video_dir}/{global_episode}.mp4"
                     imageio.mimsave(video_fname, frames, fps=15)
 
-                    cost_image.save(f"{video_dir}/cost_{global_episode}.png")
-                    assignment_image.save(f"{video_dir}/cost_{global_episode}.png")
+                    # cost_image.save(f"{video_dir}/cost_{global_episode}.png")
+                    # assignment_image.save(f"{video_dir}/cost_{global_episode}.png")
 
             # use first episode to normalize rewards
             if global_episode == 1:
@@ -301,8 +317,8 @@ def run(cfg, wandb_run=None):
                     new_discount = .2 ** (1/info["progress"])
                     discount.set_discount(new_discount)
                         
-                cost_min = cost_matrix.min()
-                cost_max = cost_matrix.max()
+                # cost_min = cost_matrix.min()
+                # cost_max = cost_matrix.max()
 
             # add to buffer at the end of the trajectory
             for i, elt in enumerate(time_steps):
@@ -377,24 +393,13 @@ def run(cfg, wandb_run=None):
                     "rewards/mean_reward": rewards.mean(),
                     "rewards/min_reward": rewards.min(),
                     "rewards/max_reward": rewards.max(),
-                    "rewards/min_distance": cost_min,
-                    "rewards/max_distance": cost_max, 
+                    # "rewards/min_distance": cost_min,
+                    # "rewards/max_distance": cost_max, 
                     "rewards/reward_scale": -agent.get_reward_scale(),
                     **eval_metrics
             }
 
             res.append((t, discount(), expl_noise, *(v for v in eval_metrics.values())))
-
-            if cfg.ads:
-                eval_cost_matrices = []
-                for pixel_obs in final_pixels:
-                    _, info = agent.rewarder(pixel_obs)
-                    eval_cost_matrices.append(info["cost_matrix"])
-                
-                ads_discount, info = ads.update(eval_cost_matrices)
-                metrics["tracking/progress"] = info["progress"]
-                metrics["tracking/ads_discount"] = ads_discount
-                metrics["tracking/match_score"] = float(info["match_score"])
 
             if wandb_run is not None:        
                 wandb_run.log(metrics)
@@ -433,7 +438,7 @@ def run(cfg, wandb_run=None):
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
-    tags = [cfg.env_name, cfg.reward_fn, cfg.obs_type] + (["pretrained"] if cfg.use_ckpt else [])
+    tags = [cfg.env_name, cfg.reward_fn, cfg.obs_type] + (["pretrained"] if cfg.use_ckpt else []) + ([f"liv_{cfg.liv_mode}"] if cfg.liv_mode != "disabled" else [])
     if cfg.mismatched:
         tags.append("mismatched")
     elif cfg.random_mismatched:

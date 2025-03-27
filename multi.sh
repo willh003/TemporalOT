@@ -9,11 +9,11 @@ TIME="20:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
-TASK_NAME=("window-open-v2" "door-open-v2" "lever-pull-v2") 
-REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
+TASK_NAME=("window-open-v2") # "door-open-v2" "lever-pull-v2") 
+REWARD_FN=("coverage") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
 SEED=(213 195 44) # "r" indicates a random seed
 
-USE_CKPT=false
+USE_CKPT=true
 
 NUM_DEMOS=1
 MISMATCHED=true
@@ -36,7 +36,7 @@ INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
-TRAIN_STEPS=1000000
+TRAIN_STEPS=500000
 
 # Logging Parameters
 WANDB_MODE="online"

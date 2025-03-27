@@ -28,6 +28,8 @@ mask_k: 10
 threshold: 0.9
 niter: 100
 
+liv_mode: disabled
+
 ads: false
 discount_factor: .9
 expl_noise: .4

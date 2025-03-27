@@ -3,8 +3,9 @@
 # Training Parameters
 #("door-open-v2" "window-open-v2" "lever-pull-v2") 
 TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="temporal_ot" 
-SEED=319 # 44
+REWARD_FN="coverage" 
+SEED=213 # 44
+LIV_MODE="disabled" # CAUTION: OVERRIDES REWARD_FN. "text", "image", or "disabled"
 
 USE_CKPT=false
 
@@ -29,7 +30,7 @@ INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
-TRAIN_STEPS=1000000
+TRAIN_STEPS=10000000
 
 # Logging Parameters
 WANDB_MODE="disabled"
@@ -39,6 +40,7 @@ MODEL_PERIOD=100000
 
 python main.py \
     train_steps=${TRAIN_STEPS} \
+    liv_mode=${LIV_MODE} \
     env_name=${TASK_NAME} \
     reward_fn=${REWARD_FN} \
     track_progress=${TRACK_PROGRESS} \
