@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # Training Parameters
+#("door-open-v2" "window-open-v2" "lever-pull-v2") 
 TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="coverage" 
-SEED=319
+REWARD_FN="temporal_ot" 
+SEED=319 # 44
 
 USE_CKPT=false
 
 NUM_DEMOS=1
-MISMATCHED=false
+MISMATCHED=true
 NUM_FRAMES="d" # d for default
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos
@@ -24,11 +25,11 @@ MASK_K=2
 TAU=1
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 
-INCLUDE_TIMESTEP=false
+INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
-TRAIN_STEPS=500000
+TRAIN_STEPS=1000000
 
 # Logging Parameters
 WANDB_MODE="disabled"

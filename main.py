@@ -147,7 +147,7 @@ def run(cfg, wandb_run=None):
     if cfg.use_ckpt:
         if cfg.mismatched and not cfg.random_mismatched:
             exp_type = "mismatched"
-            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}_{cfg.obs_type}.json"
         elif not cfg.mismatched and not cfg.random_mismatched:
             exp_type = "matched"
             checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}.json"
@@ -433,7 +433,7 @@ def run(cfg, wandb_run=None):
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
-    tags = [cfg.env_name, cfg.reward_fn] + (["pretrained"] if cfg.use_ckpt else [])
+    tags = [cfg.env_name, cfg.reward_fn, cfg.obs_type] + (["pretrained"] if cfg.use_ckpt else [])
     if cfg.mismatched:
         tags.append("mismatched")
     elif cfg.random_mismatched:

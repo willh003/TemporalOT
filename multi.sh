@@ -5,18 +5,18 @@ PARTITION="gpu"
 CPUS=2
 GPUS=1
 MEMORY=35GB
-TIME="8:00:00"
+TIME="20:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
-TASK_NAME=("door-open-v2" "window-open-v2" "lever-pull-v2") 
+TASK_NAME=("window-open-v2" "door-open-v2" "lever-pull-v2") 
 REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
 SEED=(213 195 44) # "r" indicates a random seed
 
 USE_CKPT=false
 
 NUM_DEMOS=1
-MISMATCHED=false
+MISMATCHED=true
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos
@@ -32,7 +32,7 @@ MASK_K=2
 TAU=1
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 
-INCLUDE_TIMESTEP=false 
+INCLUDE_TIMESTEP=true 
 TRACK_PROGRESS=false
 ADS=false
 
