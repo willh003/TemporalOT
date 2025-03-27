@@ -133,13 +133,10 @@ for speed_type in ['slow', 'fast']:
         demo_cv_list = []
         demo_diff_list = []
         demo_mad_list = []
-        demo_mad_with_filepath_list = []
 
         for level in [1, 3, 5]:
             for i in range(3):
-                # /share/portal/wph52/TemporalOT/create_demo/metaworld_demos/door-close-v2/random_mismatched_slow/1outof5_mismatched/1outof5_mismatched_0/door-close-v2_corner_0_mismatched_info.json
-                # /share/portal/wph52/TemporalOT/create_demo/metaworld_demos/door-open-v2/random_mismatched_slow/1outof5_mismatched/1outof5_mismatched_0/door-open-v2_corner_0_mismatched_info.json
-                with open(f"/share/portal/wph52/TemporalOT/create_demo/metaworld_demos/{task_name}/random_mismatched_{speed_type}/{level}outof5_mismatched/{level}outof5_mismatched_{i}/{task_name}_corner_0_mismatched_info.json") as f:
+                with open(f"/share/portal/hw575/TemporalOT/create_demo/metaworld_demos/{task_name}/random_mismatched_{speed_type}/{level}outof5_mismatched/{level}outof5_mismatched_{i}/{task_name}_corner3_0_mismatched_info.json") as f:
                     info = json.load(f)
                     subsection_lens = [len(info[subsection]["subsampled_indices"]) for subsection in info.keys()]
                     subsection_prop = [l/np.sum(subsection_lens) for l in subsection_lens]
@@ -160,15 +157,12 @@ for speed_type in ['slow', 'fast']:
                     diff = diff / demo_len / 10.0
                     demo_diff_list.append((tb_task_name, level, i, diff))
 
-                    demo_mad_with_filepath_list.append((tb_task_name, level, i, np.mean(np.abs(list_to_use - np.mean(list_to_use)))))
-
         # Sort the list based on the 3rd element in each tuple (from smallest to largest)
         demo_std_list.sort(key=lambda x: x[3])
         demo_norm_std_list.sort(key=lambda x: x[3])
         demo_cv_list.sort(key=lambda x: x[3])
         demo_diff_list.sort(key=lambda x: x[3])
         demo_mad_list.sort(key=lambda x: x[3])
-        demo_mad_with_filepath_list.sort(key=lambda x: x[3])
 
         # print("Demo std list")
         # print(demo_std_list)
@@ -179,9 +173,6 @@ for speed_type in ['slow', 'fast']:
         # print("Demo mad list")
         # print(demo_mad_list)
         # input("stop")
-        print("Demo mad with filepath list")
-        print(demo_mad_with_filepath_list)
-        input("stop")
         
         # Split the list into 3 even groups
         for i, result_lvl in enumerate(["Low", "Medium", "High"]):
@@ -190,12 +181,7 @@ for speed_type in ['slow', 'fast']:
             dict_from_cv[result_lvl].extend(demo_cv_list[i*3:(i+1)*3])
             dict_from_diff[result_lvl].extend(demo_std_list[i*3:(i+1)*3])
             dict_from_mad[result_lvl].extend(demo_mad_list[i*3:(i+1)*3])
-            dict_from_mad_with_filepath[result_lvl].extend(demo_mad_with_filepath_list[i*3:(i+1)*3])
 
-
-    print("Dict from mad with filepath: speed_type = ", speed_type)
-    print(dict_from_mad_with_filepath)
-    input("stop")
 
     for metric in ['mad']:
         if metric == 'std':

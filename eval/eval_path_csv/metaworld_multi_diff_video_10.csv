@@ -1,0 +1,10 @@
+Difficulty Level,Tasks,Runs,TemporalOT,ORCA,ORCA+TOT pretrained (500k-500k)
+Medium,Door-open,1,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-098427_envt=door-open-v2_rm=temporal_ot_41a4f1,batch running,
+Medium,Door-open,2,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-461782_envt=door-open-v2_rm=temporal_ot_03f7a2,,
+Medium,Door-open,3,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-462076_envt=door-open-v2_rm=temporal_ot_d2e63a,,
+Medium,Window-open,1,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-193718_envt=window-open-v2_rm=temporal_ot_404566,,
+Medium,Window-open,2,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-193697_envt=window-open-v2_rm=temporal_ot_177a3b,,
+Medium,Window-open,3,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-32-08-804363_envt=window-open-v2_rm=temporal_ot_925029,running,
+Medium,Lever-pull,1,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-343064_envt=lever-pull-v2_rm=temporal_ot_9a0b51,,
+Medium,Lever-pull,2,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-339445_envt=lever-pull-v2_rm=temporal_ot_601db3,,
+Medium,Lever-pull,3,/share/portal/hw575/TemporalOT/train_logs/2025-03-27-00-08-55-343656_envt=lever-pull-v2_rm=temporal_ot_e50715,,
