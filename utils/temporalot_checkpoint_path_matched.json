@@ -52,7 +52,7 @@
         },
         "3": {
             "path": "/share/portal/wph52/TemporalOT/train_logs/2025-01-15-17-59-05-913835_envt=window-open-v2_rm=temporal_ot_16b6ed",
-            "used": "unclaimed"
+            "used": "claimed"
         }
     },
     "lever-pull-v2": {

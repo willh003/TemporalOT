@@ -16,7 +16,7 @@ SEED=("r" "r" "r" "r") # "r" indicates a random seed
 USE_CKPT=false
 # USE_CKPT=true
 
-NUM_DEMOS=4
+NUM_DEMOS=1
 MISMATCHED=true
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
@@ -30,18 +30,19 @@ RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 MULTI_VIDEO_ABLATION=false
 NUM_RANDOM_SPEED_VIDEOS=4
 
+OBS_TYPE='pixels' # pixels for image based, features for ground truth state based=
 DISCOUNT_FACTOR=0.9 # (0.9 0.99)
 MASK_K=2
 TAU=1
 THRESHOLD=0.9 # only used by the baseline "threshold", which track the progress based on the threshold
 
-INCLUDE_TIMESTEP=true
+INCLUDE_TIMESTEP=true 
 TRACK_PROGRESS=false
 ADS=false
 USE_MAX_REWARD=false  # Default is true
 
-# TRAIN_STEPS=1000000
-TRAIN_STEPS=500000
+TRAIN_STEPS=1000000
+# TRAIN_STEPS=500000
 
 # Logging Parameters
 WANDB_MODE="online"
@@ -73,7 +74,6 @@ python main.py \
     env_name=${task_name_i} \
     reward_fn=${reward_fn_i} \
     use_ckpt=${USE_CKPT} \
-    obs_type="features" \
     seed=${seed_i} \
     discount_factor=${DISCOUNT_FACTOR} \
     track_progress=${TRACK_PROGRESS} \
@@ -88,7 +88,7 @@ python main.py \
     random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
     multi_video_ablation=${MULTI_VIDEO_ABLATION} \
     num_random_speed_videos=${NUM_RANDOM_SPEED_VIDEOS} \
-    obs_type="features" \
+    obs_type=${OBS_TYPE} \
     num_demos=${NUM_DEMOS} \
     camera_name=${CAMERA_NAME} \
     mask_k=${MASK_K} \

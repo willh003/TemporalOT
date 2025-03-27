@@ -129,6 +129,8 @@ class DDPGAgent:
             self.encoder = Encoder(obs_shape).to(device)
             self.encoder_target = Encoder(obs_shape).to(device)
             repr_dim = self.encoder.repr_dim
+            if self.include_timestep: # add an additional dimension for the timestep
+                repr_dim += 1
         else:
             repr_dim = obs_shape[0]
             
@@ -167,6 +169,7 @@ class DDPGAgent:
 
     def act(self, obs, expl_noise, eval_mode=False):
         obs = torch.as_tensor(obs, device=self.device)
+
         if self.use_encoder:
             obs = self.encoder(obs.unsqueeze(0))
         else:
@@ -228,7 +231,6 @@ class DDPGAgent:
         # Multiply step rewards by discount factors and sum across steps
         reward = torch.sum(step_reward.squeeze() * discount_factors, dim=1).unsqueeze(1)
         discount = torch.ones_like(reward) * gamma # for target Q value update
-
         # augment 
         if self.use_encoder:
             obs = self.aug(obs.float())
@@ -349,6 +351,9 @@ class DDPGAgent:
                         "critic",
                         "actor_opt",
                         "critic_opt"]
+
+        if self.use_encoder:
+            keys_to_save += ["encoder", "encoder_opt"]          
         payload = {k: self.__dict__[k] for k in keys_to_save}
         return payload
 

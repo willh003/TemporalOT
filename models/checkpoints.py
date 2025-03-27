@@ -5,4 +5,3 @@ TEMPORAL_OT_CHECKPOINTS = {
     "button-press-v2": "/share/portal/wph52/TemporalOT/train_logs/2024-12-29-10-33-21-722119_envt=button-press-v2_rm=temporal_ot_ea300e/models/1000000.pt",
     "door-open-v2": "/share/portal/wph52/TemporalOT/train_logs/2025-01-13-19-54-18-590820_envt=door-open-v2_rm=temporal_ot_1bcaf1/models/1000000.pt"
 }
-    

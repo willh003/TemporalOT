@@ -71,9 +71,9 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
             maximum=255,
             name='observation')
 
-        
+        self.include_timestep = include_timestep
         # Note: this requires 1d features
-        if include_timestep:
+        if self.include_timestep:
             # Include the timestep in the features
             feature_len = dummy_feat.shape[0] + 1
         else:
@@ -92,8 +92,13 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
 
         obs = {}
         features = self._env.reset(**kwargs)[0].astype(np.float32)
-        temporal_encoding = self.get_temporal_encoding()
-        obs['features'] = np.concatenate((features, [temporal_encoding])).astype(np.float32)
+        
+        if self.include_timestep:
+            temporal_encoding = self.get_temporal_encoding()
+            obs['features'] = np.concatenate((features, [temporal_encoding])).astype(np.float32)
+        else:
+            obs['features'] = features.astype(np.float32)
+
         obs['pixels'], obs['pixels_large'] = self.get_frame()
         obs['goal_achieved'] = False
         return obs
@@ -105,10 +110,14 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
             done = True
         
         obs = {}
-        temporal_encoding = self.get_temporal_encoding()
-        obs['features'] = np.concatenate((observation, [temporal_encoding])).astype(np.float32)
+        if self.include_timestep:
+            temporal_encoding = self.get_temporal_encoding()
+            obs['features'] = np.concatenate((observation, [temporal_encoding])).astype(np.float32)
+        else:
+            obs['features'] = observation.astype(np.float32)
         obs['pixels'], obs['pixels_large'] = self.get_frame()
         obs['goal_achieved'] = info['success']
+
         return obs, reward, done, info
 
     def observation_spec(self):

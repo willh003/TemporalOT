@@ -23,6 +23,7 @@ RANDOM_MISMATCHED_RUN_NUM=0  # Only used if RANDOM_MISMATCHED=true
 MULTI_VIDEO_ABLATION=false
 NUM_RANDOM_SPEED_VIDEOS=4
 
+OBS_TYPE='pixels' # pixels for image based, features for ground truth state based=
 DISCOUNT_FACTOR=0.9
 MASK_K=2
 TAU=1
@@ -37,7 +38,7 @@ TRAIN_STEPS=500000
 # TRAIN_STEPS=1000000
 
 # Logging Parameters
-WANDB_MODE="online"
+WANDB_MODE="disabled"
 VIDEO_PERIOD=1200 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
@@ -58,7 +59,7 @@ python main.py \
     random_mismatched_run_num=${RANDOM_MISMATCHED_RUN_NUM} \
     multi_video_ablation=${MULTI_VIDEO_ABLATION} \
     num_random_speed_videos=${NUM_RANDOM_SPEED_VIDEOS} \
-    obs_type="features" \
+    obs_type=${OBS_TYPE} \
     seed=${SEED} \
     discount_factor=${DISCOUNT_FACTOR} \
     num_demos=${NUM_DEMOS} \

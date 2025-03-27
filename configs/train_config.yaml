@@ -5,7 +5,7 @@ train_steps: 1000000
 
 env_name: button-press-v2
 camera_name: d
-obs_type: features
+obs_type: features # pixels or features
 num_frames: d # d for default, number of frames
 mismatched: False
 num_demos: 1 # Have not verified that taking multiple demos works

@@ -15,3 +15,4 @@ MUJOCO_LOG.TXT
 main_fig
 eval/eval_agg_results/eval_training_curves_matched/
 eval/eval_agg_results/eval_training_curves_mismatched/
+liv_test.py
