@@ -150,7 +150,9 @@ def run(cfg, wandb_run=None):
                         use_encoder=use_encoder)
     
     if cfg.use_ckpt:
-        if cfg.mismatched and not cfg.random_mismatched:
+        if cfg.cost_encoder != "resnet":
+            checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{cfg.cost_encoder}_encoder.json"
+        elif cfg.mismatched and not cfg.random_mismatched:
             exp_type = "mismatched"
             checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{exp_type}_{cfg.obs_type}.json"
         elif not cfg.mismatched and not cfg.random_mismatched:

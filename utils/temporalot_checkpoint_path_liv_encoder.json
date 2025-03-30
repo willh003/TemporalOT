@@ -1,0 +1,44 @@
+{
+    "window-open-v2": {
+        "1": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-30-263297_envt=window-open-v2_rm=temporal_ot_03c617",
+            "used": "unclaimed"
+        },
+        "2": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-30-270057_envt=window-open-v2_rm=temporal_ot_a8edd2",
+            "used": "completed"
+        },
+        "3": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-30-259943_envt=window-open-v2_rm=temporal_ot_c322b2",
+            "used": "completed"
+        }
+    },
+    "door-open-v2": {
+        "1": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-31-151009_envt=door-open-v2_rm=temporal_ot_fd5ed9",
+            "used": "unclaimed"
+        },
+        "2": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-34-307217_envt=door-open-v2_rm=temporal_ot_9cb980",
+            "used": "completed"
+        },
+        "3": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-34-318136_envt=door-open-v2_rm=temporal_ot_eba8a9",
+            "used": "completed"
+        }
+    },
+    "lever-pull-v2": {
+        "1": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-33-612281_envt=lever-pull-v2_rm=temporal_ot_1baab0",
+            "used": "unclaimed"
+        },
+        "2": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-33-611275_envt=lever-pull-v2_rm=temporal_ot_454759",
+            "used": "completed"
+        },
+        "3": {
+            "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-29-20-20-42-375894_envt=lever-pull-v2_rm=temporal_ot_34361c",
+            "used": "completed"
+        }
+    }
+}

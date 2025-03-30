@@ -48,11 +48,11 @@
         },
         "2": {
             "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-28-18-09-26-100530_envt=door-close-v2_rm=temporal_ot_9022e3",
-            "used": "unclaimed"
+            "used": "completed"
         },
         "3": {
             "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-28-18-09-24-864451_envt=door-close-v2_rm=temporal_ot_d22209",
-            "used": "claimed"
+            "used": "completed"
         }
     },
     "button-press-v2": {
@@ -62,11 +62,11 @@
         },
         "2": {
             "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-28-18-08-59-721193_envt=button-press-v2_rm=temporal_ot_995291",
-            "used": "claimed"
+            "used": "completed"
         },
         "3": {
             "path": "/share/portal/wph52/TemporalOT/train_logs/2025-03-28-18-09-02-662453_envt=button-press-v2_rm=temporal_ot_afc08e",
-            "used": "unclaimed"
+            "used": "completed"
         }
     }
 }

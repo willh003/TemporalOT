@@ -3,12 +3,12 @@
 # Training Parameters
 #("door-open-v2" "window-open-v2" "lever-pull-v2") 
 TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="temporal_ot" 
+REWARD_FN="coverage" 
 SEED=213 # 44 195 213
-COST_ENCODER="dino"
+COST_ENCODER="liv"
 WANDB_TAGS="['liv_cost']"
 
-USE_CKPT=false
+USE_CKPT=true
 
 NUM_DEMOS=1
 MISMATCHED=true
@@ -21,7 +21,7 @@ MISMATCHED_LEVEL=1  # Only used if RANDOM_MISMATCHED=true
 SPEED_TYPE='slow' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
 RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 
-OBS_TYPE='pixels' # pixels for image based, features for ground truth state based=
+OBS_TYPE='features' # pixels for image based, features for ground truth state based=
 DISCOUNT_FACTOR=0.9
 MASK_K=2
 TAU=1

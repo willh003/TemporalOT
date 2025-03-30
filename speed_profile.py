@@ -30,12 +30,12 @@ def write_method_compute_times_to_csv(method_compute_times, filename="method_com
         Name of the CSV file to write to (default: "method_compute_times.csv")
     """
     with open(filename, 'w', newline='') as csvfile:
-        fieldnames = ['method', 'compute_time']
+        fieldnames = ['method', 'compute_time_ms']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
         for method, compute_time in method_compute_times.items():
-            writer.writerow({'method': method, 'compute_time': compute_time})
+            writer.writerow({'method': method, 'compute_time_ms': compute_time})
     
     print(f"Results written to {filename}")
 
@@ -96,10 +96,10 @@ class DistanceMatrixRewarder:
         return rewards
 
 def main():
-    demo = np.random.randint(0, 255, size=(63, 3, 224, 224))
+    demo = np.random.randint(0, 255, size=(100, 3, 224, 224))
     device = 'cuda'
     n_rollouts = 100
-    rollout_len = 300
+    rollout_len = 100
     methods = ["threshold", "liv_text",  "ot", "temporal_ot", "dtw", "coverage"]
 
     warmup_gpu()
@@ -129,9 +129,9 @@ def main():
             compute_time = time.time() - time_start
             times.append(compute_time)
 
-        avg_latency = np.mean(times)
+        avg_latency = np.mean(times) * 1000 # store ms
         method_compute_times[method] = avg_latency
-        print(f"Average latency for {method}: {avg_latency*1000} ms")
+        print(f"Average latency for {method}: {avg_latency} ms")
 
     write_method_compute_times_to_csv(method_compute_times)
 
