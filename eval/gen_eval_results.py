@@ -20,7 +20,7 @@ from .eval_constants import get_demo_gif_path
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--domain', type=str, required=True, choices=['metaworld'], help='Domain name')
-    parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched'], help='Experiment name')
+    parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched', 'mismatched_visual', "mismatched_liv"], help='Experiment name')
     args = parser.parse_args()
 
     # Load the CSV file
@@ -31,9 +31,13 @@ if __name__ == "__main__":
     # approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA"]
     if args.exp == "matched":
         approaches = ["Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    elif args.exp =="mismatched_visual":
+        approaches = ["TemporalOT", "ORCA+TOT pretrained (500k-500k)"]
+    elif args.exp =="mismatched_liv":
+        approaches = ["LIV", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
     else:
         approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
-    approaches = ["RoboCLIP", "Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    #approaches = ["RoboCLIP", "Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
     # if args.exp == "matched":
     #     approaches.append("ORCA+TOT pretrained (500k-500k)")
 
@@ -169,7 +173,7 @@ if __name__ == "__main__":
         plt.text(approach_name, mean + 0.05, f" {mean:.2f}", ha='center', va='bottom', fontsize=18)
 
     plt.xticks(fontsize=16)
-    plt.ylim([0, 0.7])
+    plt.ylim([0, 1.0])
     plt.yticks(fontsize=16)
 
     plt.ylabel('Normalized Returns', fontsize=20)

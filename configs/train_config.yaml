@@ -19,8 +19,10 @@ speed_type: slow # Only used if RANDOM_MISMATCHED=True
 random_mismatched_run_num: 0  # Only used if RANDOM_MISMATCHED=True
 
 reward_fn: coverage
-use_ckpt: false
+cost_encoder: resnet
+use_ckpt: False
 track_progress: False
+add_sparse_reward: False
 tau: 1
 ent_reg: .01
 sdtw_smoothing: 5
@@ -28,9 +30,7 @@ mask_k: 10
 threshold: 0.9
 niter: 100
 
-liv_mode: disabled
-
-ads: false
+ads: False
 discount_factor: .9
 expl_noise: .4
 min_expl_noise: 0.0

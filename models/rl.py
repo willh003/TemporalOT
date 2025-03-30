@@ -7,7 +7,7 @@ import numpy as np
 from utils import (weight_init, to_torch, soft_update_params, cosine_distance,
                    TruncatedNormal, RandomShiftsAug)
 from seq_matching import mask_optimal_transport_plan
-
+import time
 
 ###############
 # CNN Encoder #
@@ -267,10 +267,12 @@ class DDPGAgent:
         progress_list = list()
         obs = torch.as_tensor(observations).to(self.device)
 
+        start_time = time.time()
         with torch.no_grad():
             obs = self.cost_encoder(obs)
         obs = self.get_context_observations(obs)
 
+        d_times = []
         for exp in self.demos:
             # context cost matrix
             distance_matrix = 0
@@ -285,7 +287,10 @@ class DDPGAgent:
             #         if distance_matrix[i][j] < 0.035:
             #             distance_matrix[i][j] = 0
 
+            d_start_time = time.time()
             rewards, info = self.reward_fn(distance_matrix.cpu().numpy())
+            d_end_time = time.time()
+            d_times.append(d_end_time - d_start_time)
             assignment = info["assignment"]
             rewards = rewards.astype(np.float32)
             rewards = self.rew_scale * rewards
@@ -299,15 +304,15 @@ class DDPGAgent:
             cost_matrix_list.append(distance_matrix.cpu().numpy())
 
         closest_demo_index = np.argmax(scores_list)
+        final_rewards = rewards_list[closest_demo_index]
+
+        total_time = time.time() - start_time
+        distance_time = np.mean(d_times)
 
         info = {"cost_matrix": cost_matrix_list[closest_demo_index],
-                "assignment": assignment_list[closest_demo_index]}
-
-        # if tracking progress then log it
-        if len(progress_list) > 0: 
-            info["progress"] = progress_list[closest_demo_index]
-
-        final_rewards = rewards_list[closest_demo_index]
+                "assignment": assignment_list[closest_demo_index],
+                "reward_calculation_time": total_time,
+                "matching_calculation_time": distance_time}
 
         return final_rewards, info
 

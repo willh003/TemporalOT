@@ -5,7 +5,8 @@ APPROACH_COLOR_DICT = {
     "OT": "#7D5CBD",
     "DTW": "#E3247F",
     "Threshold": "#EF772B",
-    "RoboCLIP": "#5B5B5B"
+    "RoboCLIP": "#5B5B5B",
+    "LIV": "#8C1946"
 }
 
 # APPROACH_NAME_TO_PLOT = {
@@ -26,7 +27,8 @@ APPROACH_NAME_TO_PLOT = {
     "OT": "OT",
     "DTW": "DTW",
     "Threshold": "Thres",
-    "RoboCLIP": "RCLIP"
+    "RoboCLIP": "RCLIP",
+    "LIV": "LIV"
 }
 
 

@@ -125,7 +125,10 @@ def run(cfg, wandb_run=None):
         "threshold": cfg.threshold
     }
     
-    reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
+    if "liv" in cfg.reward_fn:
+        reward_fn = lambda x: x # dummy reward function, because liv overrides it
+    else:
+        reward_fn = load_matching_fn(cfg.reward_fn, matching_fn_cfg)
 
     # initialize the agent
     action_shape=train_env.action_spec().shape
@@ -222,28 +225,41 @@ def run(cfg, wandb_run=None):
         data = load_gif_frames(demo_path, "torch")
         expert_pixel.append(data)
 
-    if cfg.liv_mode != "disabled":
+    if "liv" in cfg.reward_fn:
         from models import LIVRewarder, TASK_DESCRIPTIONS
 
-        if cfg.liv_mode == "text":
+        image_goals = None
+        text_goals = None
+        if "text" in cfg.reward_fn:
             text_goals = [TASK_DESCRIPTIONS[cfg.env_name]]
-            image_goals = None
-        elif cfg.liv_mode == "image":
-            text_goals = None
+        if "image" in cfg.reward_fn:            
             image_goals = [demo[-1] for demo in expert_pixel] # last frame of each demo as goal
+        if "text" not in cfg.reward_fn and "image" not in cfg.reward_fn:
+            raise Exception("Error: must specify at least 'image' or 'text' in liv")
 
         rewarder = LIVRewarder(text_goals=text_goals, image_goals=image_goals, device=device)
         agent.rewarder = rewarder
 
     # Resnet50: (88, 3, 224, 224) ==> (88, 2048, 7, 7) ==> (88, 100352) 
-    cost_encoder = ResNet().to(device)
-    _ = cost_encoder.eval()
+    if cfg.cost_encoder == "resnet":
+        cost_encoder = ResNet().to(device)
+        cost_encoder.eval()
+    elif cfg.cost_encoder == "liv":
+        from models import LIVCostEncoder
+        cost_encoder = LIVCostEncoder()
+    elif cfg.cost_encoder == "dino":
+        from models import DINOCostEncoder
+        cost_encoder = DINOCostEncoder().to(device)
+    else:
+        raise Exception(f"Cost encoder {cfg.cost_encoder} not recognized")
+
     with torch.no_grad():
         demos = [cost_encoder(demo.to(device)) for demo in expert_pixel]
 
     agent.init_demos(cost_encoder, demos)
     logger.info(f"len(demo) = {len(demos)}, demos[0].shape = {demos[0].shape}")
 
+    
     if cfg.ads:
         ads = AutomaticDiscountScheduling(horizon=env_horizon, alpha=.2, threshold=.9, progress_start=.2, max_progress_delta=5, ref_score_percentile=50, agent_score_percentile=90, device='cuda')
         ads.init_demos(demos)
@@ -269,6 +285,13 @@ def run(cfg, wandb_run=None):
             pixels = np.stack(pixels, axis=0)
 
             rewards, info = agent.rewarder(pixels)
+
+            # log speed metrics
+            if wandb_run is not None:
+                wandb_run.log({
+                    "reward_calculation_time": info["reward_calculation_time"],
+                    "matching_calculation_time": info["matching_calculation_time"]}
+                    )
             
             assignment = info["assignment"]
             cost_matrix = info["cost_matrix"]
@@ -326,7 +349,10 @@ def run(cfg, wandb_run=None):
                 if i == 0:
                     elt = elt._replace(reward=float("nan"))
                 else:
-                    elt = elt._replace(reward=rewards[i - 1])
+                    reward = rewards[i - 1]
+                    if cfg.add_sparse_reward:
+                        reward += time_steps[i].observation["goal_achieved"]
+                    elt = elt._replace(reward=reward)
                 replay_storage.add(elt)
 
             record_traj = global_episode % cfg.video_period == 0 or global_episode == 1 # record the first timestep and every video_record_period
@@ -438,7 +464,7 @@ def run(cfg, wandb_run=None):
 
 def run_wandb(cfg):
     run_name = get_output_folder_name()
-    tags = [cfg.env_name, cfg.reward_fn, cfg.obs_type] + (["pretrained"] if cfg.use_ckpt else []) + ([f"liv_{cfg.liv_mode}"] if cfg.liv_mode != "disabled" else [])
+    tags = list(cfg.wandb_tags) + [cfg.env_name, cfg.reward_fn, cfg.obs_type] + (["pretrained"] if cfg.use_ckpt else [])
     if cfg.mismatched:
         tags.append("mismatched")
     elif cfg.random_mismatched:

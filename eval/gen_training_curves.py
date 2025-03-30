@@ -31,27 +31,37 @@ def get_values_from_eval_path(eval_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--domain', type=str, required=True, choices=['metaworld'], help='Domain name')
-    parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched'], help='Experiment name')
+    parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched', 'mismatched_visual', 'mismatched_liv'], help='Experiment name')
     args = parser.parse_args()
 
     # tasks_to_plot = ["Button-press"]
     # tasks_to_plot = ["Door-close", "Window-open", "Stick-push"]
     # All the tasks
-    tasks_to_plot = ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]
+    #tasks_to_plot = ["Button-press", "Door-close", "Door-open", "Window-open", "Lever-pull", "Hand-insert", "Push", "Basketball", "Stick-push", "Door-lock"]
+    # Ablation Tasks
+    tasks_to_plot = ["Door-close", "Button-press", "Door-open", "Window-open", "Lever-pull"]
+
 
     # Load the CSV file
     csv_file = os.path.join("eval/eval_path_csv", f"{args.domain}_{args.exp}.csv")
     df = pd.read_csv(csv_file)
 
     # Columns for approaches
-    approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    if args.exp == "matched":
+        approaches = ["Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    elif args.exp =="mismatched_visual":
+        approaches = ["TemporalOT", "ORCA+TOT pretrained (500k-500k)"]
+    elif args.exp =="mismatched_liv":
+        approaches = ["LIV", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"] 
+    else:
+        approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
 
     # For ORCA + TOT pretrained, we need to load the checkpoint path from the json file
-    if "ORCA+TOT pretrained (500k-500k)" in approaches:
-        checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{args.exp}.json"
+    # if "ORCA+TOT pretrained (500k-500k)" in approaches:
+    #     checkpoint_json_path = f"./utils/temporalot_checkpoint_path_{args.exp}.json"
 
-        with open(checkpoint_json_path, "r") as f:
-            checkpoint_path_dict = json.load(f)
+    #     with open(checkpoint_json_path, "r") as f:
+    #         checkpoint_path_dict = json.load(f)
 
     for task in tasks_to_plot:
         """
@@ -149,6 +159,7 @@ if __name__ == "__main__":
         plt.title(task.replace("-", " ").title() + f" (ep-len={MAX_PATH_LENGTH[task.lower() + '-v2']})", fontsize=20)
         
         # Save plot
+        os.makedirs(f"eval/eval_agg_results/eval_training_curves_{args.exp}", exist_ok=True)
         plt_save_path = os.path.join(f"eval/eval_agg_results/eval_training_curves_{args.exp}", f"{args.domain}_{args.exp}_{task.lower()}_training_curves.png")
 
         plt.savefig(plt_save_path, dpi=300, bbox_inches='tight')

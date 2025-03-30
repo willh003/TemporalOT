@@ -5,21 +5,19 @@ PARTITION="gpu"
 CPUS=2
 GPUS=1
 MEMORY=35GB
-TIME="36:00:00"
+TIME="20:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
-TASK_NAME=("lever-pull-v2")  #"window-open-v2" 
-REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
-SEED=(195) # "r" indicates a random seed
-COST_ENCODER="dino"
-WANDB_TAGS="['dino_cost']"
-
+TASK_NAME=("button-press-v2")  #"window-open-v2" 
+REWARD_FN=("liv_text") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
+ADD_SPARSE_REWARD=true
+SEED=(44) # 213 "r" indicates a random seed
 
 USE_CKPT=false
 
 NUM_DEMOS=1
-MISMATCHED=true
+MISMATCHED=false
 NUM_FRAMES="d" # d for default (if it's defined, it will search under mistmatched/subsampled_{NUM_FRAMES})
 CAMERA_NAME="d" # d for default (defined in env_utils.CAMERA)
 # Parameters for random mismatched demos
@@ -39,10 +37,11 @@ INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
-TRAIN_STEPS=500000
+TRAIN_STEPS=1000000
 
 # Logging Parameters
 WANDB_MODE="online"
+WANDB_TAGS="['sparse']"
 VIDEO_PERIOD=2400 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
@@ -69,8 +68,7 @@ echo "Running training for task: ${task_name_i} with seed: ${seed_i}, job ID: \$
 python main.py \
     env_name=${task_name_i} \
     reward_fn=${reward_fn_i} \
-    cost_encoder=${COST_ENCODER} \
-    wandb_tags=${WANDB_TAGS} \
+    add_sparse_reward=${ADD_SPARSE_REWARD} \
     use_ckpt=${USE_CKPT} \
     obs_type="features" \
     seed=${seed_i} \
@@ -94,7 +92,8 @@ python main.py \
     eval_period=${EVAL_PERIOD} \
     model_period=${MODEL_PERIOD} \
     video_period=${VIDEO_PERIOD} \
-    wandb_mode=${WANDB_MODE}
+    wandb_mode=${WANDB_MODE} \
+    wandb_tags=${WANDB_TAGS}
 EOF
             sleep 1.1 # Ensure a unique timestamp for each run
         done

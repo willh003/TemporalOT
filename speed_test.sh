@@ -5,16 +5,13 @@ PARTITION="gpu"
 CPUS=2
 GPUS=1
 MEMORY=35GB
-TIME="36:00:00"
+TIME="20:00:00"
 
 # Training Parameters
 # All tasks in order: ("button-press-v2" "door-close-v2" "door-open-v2" "window-open-v2" "lever-pull-v2" "hand-insert-v2" "push-v2" "basketball-v2" "stick-push-v2" "door-lock-v2")
-TASK_NAME=("lever-pull-v2")  #"window-open-v2" 
-REWARD_FN=("temporal_ot") # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
-SEED=(195) # "r" indicates a random seed
-COST_ENCODER="dino"
-WANDB_TAGS="['dino_cost']"
-
+TASK_NAME=button-press-v2  #"window-open-v2" 
+REWARD_FN=("coverage" "temporal_ot" "ot" "liv_text" "threshold" "dtw" ) # ("threshold" "ot" "temporal_ot" "dtw" "coverage")
+SEED=44 # "r" indicates a random seed
 
 USE_CKPT=false
 
@@ -39,41 +36,22 @@ INCLUDE_TIMESTEP=true
 TRACK_PROGRESS=false
 ADS=false
 
-TRAIN_STEPS=500000
+TRAIN_STEPS=20000
 
 # Logging Parameters
 WANDB_MODE="online"
-VIDEO_PERIOD=2400 
+VIDEO_PERIOD=10000 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
+WANDB_TAGS="['speed_test']"
 
-# Loop through tasks, rewards, and seeds
-for task_name_i in "${TASK_NAME[@]}"; do
-    for reward_fn_i in "${REWARD_FN[@]}"; do
-        for seed_i in "${SEED[@]}"; do
-            sbatch <<EOF
-#!/bin/bash
-#SBATCH --job-name=train-${task_name}-${tau}
-#SBATCH --partition=${PARTITION}
-#SBATCH --cpus-per-task=${CPUS}
-#SBATCH --gres=gpu:${GPUS}
-#SBATCH --mem=${MEMORY}
-#SBATCH --time=${TIME}
-#SBATCH --output=dump/train_${task_name_i}_${reward_fn_i}_%j.out
-#SBATCH --error=dump/train_${task_name_i}_${reward_fn_i}_%j.err
-
-# Capture the Slurm job ID
-job_id=\$SLURM_JOB_ID
-
-echo "Running training for task: ${task_name_i} with seed: ${seed_i}, job ID: \$job_id"
+for reward_fn_i in "${REWARD_FN[@]}"; do
 python main.py \
-    env_name=${task_name_i} \
+    env_name=${TASK_NAME} \
     reward_fn=${reward_fn_i} \
-    cost_encoder=${COST_ENCODER} \
-    wandb_tags=${WANDB_TAGS} \
     use_ckpt=${USE_CKPT} \
     obs_type="features" \
-    seed=${seed_i} \
+    seed=${SEED} \
     discount_factor=${DISCOUNT_FACTOR} \
     track_progress=${TRACK_PROGRESS} \
     ads=${ADS} \
@@ -94,9 +72,6 @@ python main.py \
     eval_period=${EVAL_PERIOD} \
     model_period=${MODEL_PERIOD} \
     video_period=${VIDEO_PERIOD} \
-    wandb_mode=${WANDB_MODE}
-EOF
-            sleep 1.1 # Ensure a unique timestamp for each run
-        done
-    done
+    wandb_mode=${WANDB_MODE} \
+    wandb_tags=${WANDB_TAGS}
 done

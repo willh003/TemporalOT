@@ -3,6 +3,7 @@ import clip
 import torch
 from torchvision import transforms
 import numpy as np
+import time
 
 def cosine_distance(x, y):
     C = torch.mm(x, y.T)
@@ -15,17 +16,41 @@ def cosine_distance(x, y):
     return C
 
 TASK_DESCRIPTIONS = {
-    "button-press-v2": "press the button",
-    "door-close-v2": "close the door",
-    "door-open-v2": "open the door",
-    "window-open-v2": "open the window",
-    "lever-pull-v2": "pull the lever",
-    "hand-insert-v2": "insert hand into opening",
-    "push-v2": "push the object forward",
-    "basketball-v2": "shoot the basketball",
-    "stick-push-v2": "push with the stick",
-    "door-lock-v2": "lock the door"
+    "button-press-v2": "Press a button from the side",
+    "door-close-v2": "Close a door with a revolving joint",
+    "door-open-v2": "Open a door with a revolving joint",
+    "window-open-v2": "Push and open a window.",
+    "lever-pull-v2": "Pull a lever up",
+    "hand-insert-v2": "Insert a block into an opening on the floor",
+    "push-v2": "Push the puck to a goal",
+    "basketball-v2": "Place a basketball in a hoop",
+    "stick-push-v2": "Use a stick to push a cylinder",
+    "door-lock-v2": "Pull down a lever to lock a door"
 }
+
+class LIVCostEncoder:
+    def __init__(self):
+        self.model = liv.load_liv()
+    
+    def __call__(self, obs):
+        obs = obs[:, -3:] / 255.0 
+        return self.model(obs, modality="vision")
+
+class DINOCostEncoder:
+    def __init__(self):
+        self.model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14')
+        self.normalizer = transforms.Normalize(mean=torch.FloatTensor([0.485, 0.456, 0.406]),
+                                    std=torch.FloatTensor([0.229, 0.224, 0.225]))
+    
+    def to(self, device):
+        self.model = self.model.to(device)
+        return self
+
+    def __call__(self, obs):
+        
+        obs = obs[:, -3:] / 255.0 
+        h = self.normalizer(obs)
+        return self.model(h)
 
 class LIVRewarder:
     def __init__(self, text_goals: list = None, image_goals: list = None, device='cuda'):
@@ -51,7 +76,7 @@ class LIVRewarder:
             all_embs = text_embs
         else:
             all_embs = torch.cat((text_embs, image_embs), dim=0)
-
+        
         all_embs = all_embs.detach()
         
         # goal is the mean of text and image goals, shape (1, d)
@@ -61,8 +86,38 @@ class LIVRewarder:
         """
         Observations may be of shape B, C*N, H, W, where N is the number of images (stack on each other)
         C must be a multiple of 3
+        Calculates a simple cosine similarity reward, as performed in FuRL and VLMRMs
         """
+        start = time.time()
+        observations = torch.from_numpy(observations).to(self.device)
+
+        B, C, H, W = observations.shape
+        assert C % 3 == 0
+        observations = observations.view(B * (C // 3), 3, H, W)
+
+        obs_embs = self.model(observations, modality="vision") # (T, d)
         
+        obs_goal_distance = cosine_distance(obs_embs, self.goal)[:, 0]
+        obs_goal_distance = obs_goal_distance.view(B, C // 3)
+        mean_obs_goal_distance = obs_goal_distance.mean(dim=1) # mean distance from goal for all observations (smoothens if frame stacking)
+
+        final_rewards = mean_obs_goal_distance.detach().cpu().numpy()
+
+        total_time = time.time() - start
+        info = {"cost_matrix": None,
+                "assignment": None,
+                "reward_calculation_time": total_time,
+                "matching_calculation_time": 0}
+
+        return final_rewards, info
+
+    def liv_potential_reward(self, observations):
+        """
+        Observations may be of shape B, C*N, H, W, where N is the number of images (stack on each other)
+        C must be a multiple of 3
+        Calculates the potential reward as described in LIV: 
+        r_{t+1} = <phi(o_{t+1}), phi(g)> - <phi(o_{t}), phi(g)>
+        """    
         observations = torch.from_numpy(observations).to(self.device)
 
         B, C, H, W = observations.shape

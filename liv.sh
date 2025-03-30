@@ -3,10 +3,10 @@
 # Training Parameters
 #("door-open-v2" "window-open-v2" "lever-pull-v2") 
 TASK_NAME="window-open-v2" # ("button-press-v2" "door-close-v2"  "window-open-v2" "stick-push-v2" "lever-pull-v2")
-REWARD_FN="temporal_ot" 
-SEED=213 # 44 195 213
-COST_ENCODER="dino"
-WANDB_TAGS="['liv_cost']"
+REWARD_FN="liv_text" # liv_text, liv_image, liv_text_image
+SEED=213 # 44
+ADD_SPARSE_REWARD=true
+
 
 USE_CKPT=false
 
@@ -21,7 +21,7 @@ MISMATCHED_LEVEL=1  # Only used if RANDOM_MISMATCHED=true
 SPEED_TYPE='slow' # Only used if RANDOM_MISMATCHED=true, options are 'slow', 'fast', 'mixed'
 RANDOM_MISMATCHED_RUN_NUM=0 # Only used if RANDOM_MISMATCHED=true
 
-OBS_TYPE='pixels' # pixels for image based, features for ground truth state based=
+OBS_TYPE='features' # pixels for image based, features for ground truth state based=
 DISCOUNT_FACTOR=0.9
 MASK_K=2
 TAU=1
@@ -35,15 +35,14 @@ TRAIN_STEPS=1000000
 
 # Logging Parameters
 WANDB_MODE="disabled"
-VIDEO_PERIOD=10000 
+VIDEO_PERIOD=1200 
 EVAL_PERIOD=10000
 MODEL_PERIOD=100000
 
 
 python main.py \
     train_steps=${TRAIN_STEPS} \
-    cost_encoder=${COST_ENCODER} \
-    wandb_tags=${WANDB_TAGS} \
+    add_sparse_reward=${ADD_SPARSE_REWARD} \
     env_name=${TASK_NAME} \
     reward_fn=${REWARD_FN} \
     track_progress=${TRACK_PROGRESS} \
@@ -69,4 +68,5 @@ python main.py \
     eval_period=${EVAL_PERIOD} \
     model_period=${MODEL_PERIOD} \
     video_period=${VIDEO_PERIOD} \
+    
     
