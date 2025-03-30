@@ -6,7 +6,10 @@ APPROACH_COLOR_DICT = {
     "DTW": "#E3247F",
     "Threshold": "#EF772B",
     "RoboCLIP": "#5B5B5B",
-    "LIV": "#8C1946"
+    "LIV": "#8C1946",
+    "liv_encoder": "#8C1946",
+    "dino_encoder": "#FDDA0D",
+    "resnet_encoder": "#83CE74"
 }
 
 # APPROACH_NAME_TO_PLOT = {
@@ -28,7 +31,10 @@ APPROACH_NAME_TO_PLOT = {
     "DTW": "DTW",
     "Threshold": "Thres",
     "RoboCLIP": "RCLIP",
-    "LIV": "LIV"
+    "LIV": "LIV",
+    "liv_encoder": "LIV",
+    "dino_encoder": "DINOv2-L",
+    "resnet_encoder": "Resnet50"
 }
 
 

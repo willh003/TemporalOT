@@ -20,7 +20,7 @@ from .eval_constants import get_demo_gif_path
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--domain', type=str, required=True, choices=['metaworld'], help='Domain name')
-    parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched', 'mismatched_visual', "mismatched_liv"], help='Experiment name')
+    parser.add_argument('-e', '--exp', type=str, required=True, choices=['mismatched', 'matched', 'mismatched_visual', "mismatched_liv", "mismatched_encoder_ablation"], help='Experiment name')
     args = parser.parse_args()
 
     # Load the CSV file
@@ -35,12 +35,13 @@ if __name__ == "__main__":
         approaches = ["TemporalOT", "ORCA+TOT pretrained (500k-500k)"]
     elif args.exp =="mismatched_liv":
         approaches = ["LIV", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
+    elif args.exp =="mismatched_encoder_ablation":
+        approaches = ["liv_encoder", "resnet_encoder"] #, "dino_encoder"]
     else:
         approaches = ["Threshold", "RoboCLIP", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
     #approaches = ["RoboCLIP", "Threshold", "DTW", "OT", "TemporalOT", "ORCA", "ORCA+TOT pretrained (500k-500k)"]
     # if args.exp == "matched":
     #     approaches.append("ORCA+TOT pretrained (500k-500k)")
-
     # Initialize a dictionary to store results
     results = {}
 
@@ -62,7 +63,7 @@ if __name__ == "__main__":
             path = row[approach]
             if isinstance(path, str) and os.path.exists(path):
                 # Assume each folder contains a file named `results.txt` with a single float value
-                if approach == "ORCA+TOT pretrained (500k-500k)":
+                if approach == "ORCA+TOT pretrained (500k-500k)" or "encoder" in approach: # for encoder ablations, only running ORCA
                     final_eval_path = os.path.join(path, "eval", "500000_return.npy")
                 else:
                     final_eval_path = os.path.join(path, "eval", "1000000_return.npy")

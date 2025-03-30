@@ -1,0 +1,5 @@
+Difficulty Level,Task,liv_encoder,resnet_encoder
+Medium,Door-open,1.10 (0.06),1.71 (0.08)
+Medium,Window-open,1.17 (0.15),0.50 (0.14)
+Medium,Lever-pull,0.04 (0.01),0.28 (0.09)
+Total,Total,0.77 (0.08),0.83 (0.09)

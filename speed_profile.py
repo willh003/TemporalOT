@@ -25,17 +25,22 @@ def write_method_compute_times_to_csv(method_compute_times, filename="method_com
     Parameters:
     -----------
     method_compute_times : dict
-        Dictionary mapping method names to their average compute times
+        Dictionary mapping method names to a tuple of (mean, std) of compute times
     filename : str, optional
         Name of the CSV file to write to (default: "method_compute_times.csv")
     """
     with open(filename, 'w', newline='') as csvfile:
-        fieldnames = ['method', 'compute_time_ms']
+        fieldnames = ['method', 'compute_time_ms', 'std_ms', 'compute_time_with_std']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
-        for method, compute_time in method_compute_times.items():
-            writer.writerow({'method': method, 'compute_time_ms': compute_time})
+        for method, (mean_time, std_time) in method_compute_times.items():
+            writer.writerow({
+                'method': method, 
+                'compute_time_ms': mean_time,
+                'std_ms': std_time,
+                'compute_time_with_std': f"{mean_time:.2f} ± {std_time:.2f}"
+            })
     
     print(f"Results written to {filename}")
 
@@ -95,10 +100,11 @@ class DistanceMatrixRewarder:
         rewards, info = self.reward_fn(distance_matrix.cpu().numpy())
         return rewards
 
+
 def main():
     demo_length = 100
     n_rollouts = 100
-    rollout_len = 100
+    rollout_len = 10
     device = 'cuda'
     methods = ["threshold", "liv_text",  "ot", "temporal_ot", "dtw", "coverage"]
     demo = np.random.randint(0, 255, size=(demo_length, 3, 224, 224))
@@ -129,11 +135,14 @@ def main():
             compute_time = time.time() - time_start
             times.append(compute_time)
 
-        avg_latency = np.mean(times) * 1000 # store ms
-        method_compute_times[method] = avg_latency
-        print(f"Average latency for {method}: {avg_latency} ms")
+        avg_latency = np.mean(times) * 1000  # store ms
+        std_latency = np.std(times) * 1000    # standard deviation in ms
+        method_compute_times[method] = (avg_latency, std_latency)
+        print(f"Average latency for {method}: {avg_latency:.2f} ± {std_latency:.2f} ms")
 
     write_method_compute_times_to_csv(method_compute_times)
+
+
 
 if __name__=="__main__":
     main()
