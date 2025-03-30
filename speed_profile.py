@@ -96,12 +96,12 @@ class DistanceMatrixRewarder:
         return rewards
 
 def main():
-    demo = np.random.randint(0, 255, size=(100, 3, 224, 224))
-    device = 'cuda'
+    demo_length = 100
     n_rollouts = 100
     rollout_len = 100
+    device = 'cuda'
     methods = ["threshold", "liv_text",  "ot", "temporal_ot", "dtw", "coverage"]
-
+    demo = np.random.randint(0, 255, size=(demo_length, 3, 224, 224))
     warmup_gpu()
 
     method_compute_times = {}
